@@ -1,13 +1,7 @@
+
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { 
-  Menubar,
-  MenubarContent,
-  MenubarItem,
-  MenubarMenu,
-  MenubarTrigger,
-} from "@/components/ui/menubar";
 import { Home, MessageSquare, Wallet, Shield, Settings, Moon, Sun, Menu, X, LogOut, User, BarChart3, Newspaper, GraduationCap, Users, Bell, TrendingUp, PieChart, Filter, Lightbulb, Target, Calculator, PlayCircle } from "lucide-react";
 import { DashboardHome } from "@/components/DashboardHome";
 import { AIChat } from "@/components/AIChat";
@@ -32,7 +26,6 @@ import PaperTrading from "@/components/PaperTrading";
 const Index = () => {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("home");
   const { user, signOut } = useAuth();
   const { toast } = useToast();
 
@@ -54,11 +47,6 @@ const Index = () => {
       title: "Signed out",
       description: "You have been successfully signed out.",
     });
-  };
-
-  const handleTabChange = (value: string) => {
-    setActiveTab(value);
-    setIsMobileMenuOpen(false);
   };
 
   return (
@@ -123,128 +111,81 @@ const Index = () => {
 
       {/* Main Content */}
       <div className="container mx-auto px-6 py-8">
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          {/* Compact Navigation with Menubar */}
+        <Tabs defaultValue="home" className="w-full">
+          {/* Professional Tab Navigation */}
           <div className="mb-8">
-            <div className={`flex flex-wrap gap-2 items-center justify-center md:justify-start ${isMobileMenuOpen ? 'flex' : 'hidden'} md:flex`}>
-              {/* Essential Quick Access Tabs */}
-              <TabsList className="grid grid-cols-3 h-12 rounded-2xl bg-white/60 dark:bg-slate-900/60 p-1 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-lg">
-                <TabsTrigger value="home" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
-                  <Home className="w-4 h-4 mr-1" />
-                  <span className="hidden sm:inline">Dashboard</span>
-                </TabsTrigger>
-                <TabsTrigger value="portfolio-analytics" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
-                  <PieChart className="w-4 h-4 mr-1" />
-                  <span className="hidden sm:inline">Analytics</span>
-                </TabsTrigger>
-                <TabsTrigger value="chat" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
-                  <MessageSquare className="w-4 h-4 mr-1" />
-                  <span className="hidden sm:inline">AI Chat</span>
-                </TabsTrigger>
-              </TabsList>
-
-              {/* Grouped Navigation Menubar */}
-              <Menubar className="border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-lg">
-                {/* Portfolio & Trading */}
-                <MenubarMenu>
-                  <MenubarTrigger className="flex items-center gap-2">
-                    <TrendingUp className="w-4 h-4" />
-                    <span className="hidden sm:inline">Trading</span>
-                  </MenubarTrigger>
-                  <MenubarContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                    <MenubarItem onClick={() => handleTabChange('wallet')}>
-                      <Wallet className="w-4 h-4 mr-2" />
-                      Portfolio
-                    </MenubarItem>
-                    <MenubarItem onClick={() => handleTabChange('trading')}>
-                      <TrendingUp className="w-4 h-4 mr-2" />
-                      Live Trading
-                    </MenubarItem>
-                    <MenubarItem onClick={() => handleTabChange('paper-trading')}>
-                      <PlayCircle className="w-4 h-4 mr-2" />
-                      Paper Trading
-                    </MenubarItem>
-                    <MenubarItem onClick={() => handleTabChange('screener')}>
-                      <Filter className="w-4 h-4 mr-2" />
-                      Market Screener
-                    </MenubarItem>
-                  </MenubarContent>
-                </MenubarMenu>
-
-                {/* Planning & Tools */}
-                <MenubarMenu>
-                  <MenubarTrigger className="flex items-center gap-2">
-                    <Target className="w-4 h-4" />
-                    <span className="hidden sm:inline">Planning</span>
-                  </MenubarTrigger>
-                  <MenubarContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                    <MenubarItem onClick={() => handleTabChange('goal-planning')}>
-                      <Target className="w-4 h-4 mr-2" />
-                      Goal Planning
-                    </MenubarItem>
-                    <MenubarItem onClick={() => handleTabChange('investment-ideas')}>
-                      <Lightbulb className="w-4 h-4 mr-2" />
-                      Investment Ideas
-                    </MenubarItem>
-                    <MenubarItem onClick={() => handleTabChange('loan-calculator')}>
-                      <Calculator className="w-4 h-4 mr-2" />
-                      Loan Calculator
-                    </MenubarItem>
-                  </MenubarContent>
-                </MenubarMenu>
-
-                {/* Research & Learning */}
-                <MenubarMenu>
-                  <MenubarTrigger className="flex items-center gap-2">
-                    <Newspaper className="w-4 h-4" />
-                    <span className="hidden sm:inline">Research</span>
-                  </MenubarTrigger>
-                  <MenubarContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                    <MenubarItem onClick={() => handleTabChange('news')}>
-                      <Newspaper className="w-4 h-4 mr-2" />
-                      News & Research
-                    </MenubarItem>
-                    <MenubarItem onClick={() => handleTabChange('education')}>
-                      <GraduationCap className="w-4 h-4 mr-2" />
-                      Education
-                    </MenubarItem>
-                    <MenubarItem onClick={() => handleTabChange('analytics')}>
-                      <BarChart3 className="w-4 h-4 mr-2" />
-                      Analytics Reports
-                    </MenubarItem>
-                  </MenubarContent>
-                </MenubarMenu>
-
-                {/* Social & Settings */}
-                <MenubarMenu>
-                  <MenubarTrigger className="flex items-center gap-2">
-                    <Settings className="w-4 h-4" />
-                    <span className="hidden sm:inline">More</span>
-                  </MenubarTrigger>
-                  <MenubarContent className="bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                    <MenubarItem onClick={() => handleTabChange('social')}>
-                      <Users className="w-4 h-4 mr-2" />
-                      Social Community
-                    </MenubarItem>
-                    <MenubarItem onClick={() => handleTabChange('notifications')}>
-                      <Bell className="w-4 h-4 mr-2" />
-                      Notifications
-                    </MenubarItem>
-                    <MenubarItem onClick={() => handleTabChange('security')}>
-                      <Shield className="w-4 h-4 mr-2" />
-                      Security Center
-                    </MenubarItem>
-                    <MenubarItem onClick={() => handleTabChange('settings')}>
-                      <Settings className="w-4 h-4 mr-2" />
-                      Settings
-                    </MenubarItem>
-                  </MenubarContent>
-                </MenubarMenu>
-              </Menubar>
-            </div>
+            <TabsList className={`grid grid-cols-3 md:grid-cols-6 lg:grid-cols-16 h-12 items-center justify-center rounded-2xl bg-white/60 dark:bg-slate-900/60 p-1 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-lg ${isMobileMenuOpen ? 'flex' : 'hidden'} md:grid overflow-x-auto`}>
+              <TabsTrigger value="home" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <Home className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Dashboard</span>
+              </TabsTrigger>
+              <TabsTrigger value="portfolio-analytics" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <PieChart className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Analytics</span>
+              </TabsTrigger>
+              <TabsTrigger value="goal-planning" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <Target className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Goals</span>
+              </TabsTrigger>
+              <TabsTrigger value="investment-ideas" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <Lightbulb className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Ideas</span>
+              </TabsTrigger>
+              <TabsTrigger value="loan-calculator" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <Calculator className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Loans</span>
+              </TabsTrigger>
+              <TabsTrigger value="paper-trading" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <PlayCircle className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Practice</span>
+              </TabsTrigger>
+              <TabsTrigger value="chat" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <MessageSquare className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">AI Chat</span>
+              </TabsTrigger>
+              <TabsTrigger value="wallet" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <Wallet className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Portfolio</span>
+              </TabsTrigger>
+              <TabsTrigger value="trading" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <TrendingUp className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Trading</span>
+              </TabsTrigger>
+              <TabsTrigger value="screener" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <Filter className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Screener</span>
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <BarChart3 className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Reports</span>
+              </TabsTrigger>
+              <TabsTrigger value="news" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <Newspaper className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">News</span>
+              </TabsTrigger>
+              <TabsTrigger value="education" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <GraduationCap className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Education</span>
+              </TabsTrigger>
+              <TabsTrigger value="social" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <Users className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Social</span>
+              </TabsTrigger>
+              <TabsTrigger value="notifications" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <Bell className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Alerts</span>
+              </TabsTrigger>
+              <TabsTrigger value="security" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <Shield className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Security</span>
+              </TabsTrigger>
+              <TabsTrigger value="settings" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <Settings className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Settings</span>
+              </TabsTrigger>
+            </TabsList>
           </div>
 
-          {/* Tab Content remains the same */}
           <TabsContent value="home" className="space-y-6 mt-6">
             <DashboardHome />
           </TabsContent>
