@@ -1,671 +1,493 @@
-
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Filter, Save, TrendingUp, TrendingDown, RefreshCw, Star } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
+import { 
+  Search, 
+  Filter, 
+  TrendingUp, 
+  TrendingDown,
+  Star,
+  Save,
+  RefreshCw,
+  BarChart3,
+  Activity,
+  DollarSign
+} from "lucide-react";
 
-interface StockData {
+interface Stock {
   symbol: string;
   name: string;
+  sector: string;
   price: number;
   change: number;
-  changePercent: number;
   volume: number;
   marketCap: number;
-  peRatio?: number;
-  sector: string;
-  rsi?: number;
-  macd?: number;
-  sma50?: number;
-  sma200?: number;
+  pe: number;
+  rsi: number;
 }
 
-interface ScreenerFilters {
-  minPrice: string;
-  maxPrice: string;
-  minVolume: string;
-  maxVolume: string;
-  minMarketCap: string;
-  maxMarketCap: string;
-  minPE: string;
-  maxPE: string;
+interface FilterState {
   sector: string;
-  minRSI: string;
-  maxRSI: string;
-  priceAboveSMA50: boolean;
-  priceAboveSMA200: boolean;
-  goldenCross: boolean;
+  priceMin: number;
+  priceMax: number;
+  marketCap: string;
+  volume: number;
+  peMin: number;
+  peMax: number;
 }
 
-const sectors = [
-  "All Sectors",
-  "Technology",
-  "Healthcare",
-  "Financial Services",
-  "Consumer Cyclical",
-  "Communication Services",
-  "Industrials",
-  "Consumer Defensive",
-  "Energy",
-  "Utilities",
-  "Real Estate",
-  "Materials",
-  "Basic Materials"
-];
-
-const mockStocks: StockData[] = [
+const MOCK_STOCKS: Stock[] = [
   {
     symbol: "AAPL",
     name: "Apple Inc.",
-    price: 185.43,
-    change: -2.75,
-    changePercent: -1.46,
-    volume: 50240000,
-    marketCap: 2850000000000,
-    peRatio: 28.5,
     sector: "Technology",
-    rsi: 45.2,
-    macd: 1.2,
-    sma50: 180.25,
-    sma200: 175.80
+    price: 175.96,
+    change: 0.34,
+    volume: 56478923,
+    marketCap: 2820000000000,
+    pe: 28.26,
+    rsi: 62.5
   },
   {
     symbol: "MSFT",
-    name: "Microsoft Corporation",
-    price: 362.80,
-    change: 4.25,
-    changePercent: 1.18,
-    volume: 28450000,
-    marketCap: 2700000000000,
-    peRatio: 32.1,
+    name: "Microsoft Corp.",
     sector: "Technology",
-    rsi: 62.8,
-    macd: 2.1,
-    sma50: 355.40,
-    sma200: 340.15
+    price: 429.26,
+    change: 0.87,
+    volume: 30456789,
+    marketCap: 3190000000000,
+    pe: 38.45,
+    rsi: 70.1
   },
   {
     symbol: "GOOGL",
     name: "Alphabet Inc.",
-    price: 138.21,
-    change: 2.15,
-    changePercent: 1.58,
-    volume: 31200000,
-    marketCap: 1750000000000,
-    peRatio: 25.7,
-    sector: "Communication Services",
-    rsi: 58.4,
-    macd: 0.8,
-    sma50: 135.60,
-    sma200: 130.25
+    sector: "Technology",
+    price: 178.44,
+    change: -0.12,
+    volume: 23987654,
+    marketCap: 1870000000000,
+    pe: 25.67,
+    rsi: 58.9
+  },
+  {
+    symbol: "AMZN",
+    name: "Amazon.com Inc.",
+    sector: "Consumer",
+    price: 185.25,
+    change: 1.23,
+    volume: 41234567,
+    marketCap: 1900000000000,
+    pe: 95.23,
+    rsi: 65.4
   },
   {
     symbol: "TSLA",
-    name: "Tesla, Inc.",
-    price: 245.67,
-    change: -8.90,
-    changePercent: -3.50,
-    volume: 89340000,
-    marketCap: 780000000000,
-    peRatio: 65.2,
-    sector: "Consumer Cyclical",
-    rsi: 35.1,
-    macd: -1.5,
-    sma50: 255.30,
-    sma200: 240.75
-  },
-  {
-    symbol: "NVDA",
-    name: "NVIDIA Corporation",
-    price: 485.23,
-    change: 12.45,
-    changePercent: 2.63,
-    volume: 45670000,
-    marketCap: 1200000000000,
-    peRatio: 45.8,
-    sector: "Technology",
-    rsi: 71.2,
-    macd: 3.2,
-    sma50: 470.15,
-    sma200: 420.80
+    name: "Tesla Inc.",
+    sector: "Consumer",
+    price: 256.78,
+    change: -2.34,
+    volume: 45678901,
+    marketCap: 810000000000,
+    pe: 67.89,
+    rsi: 45.6
   },
   {
     symbol: "JPM",
     name: "JPMorgan Chase & Co.",
-    price: 148.52,
-    change: 1.85,
-    changePercent: 1.26,
-    volume: 12340000,
-    marketCap: 435000000000,
-    peRatio: 12.4,
-    sector: "Financial Services",
-    rsi: 52.8,
-    macd: 0.5,
-    sma50: 145.30,
-    sma200: 140.60
+    sector: "Finance",
+    price: 198.54,
+    change: 0.56,
+    volume: 15678902,
+    marketCap: 480000000000,
+    pe: 12.45,
+    rsi: 55.2
+  },
+  {
+    symbol: "JNJ",
+    name: "Johnson & Johnson",
+    sector: "Healthcare",
+    price: 165.23,
+    change: 0.23,
+    volume: 7890123,
+    marketCap: 430000000000,
+    pe: 27.89,
+    rsi: 48.9
+  },
+  {
+    symbol: "V",
+    name: "Visa Inc.",
+    sector: "Finance",
+    price: 275.87,
+    change: 0.78,
+    volume: 8901234,
+    marketCap: 570000000000,
+    pe: 40.56,
+    rsi: 61.3
+  },
+  {
+    symbol: "UNH",
+    name: "UnitedHealth Group",
+    sector: "Healthcare",
+    price: 523.45,
+    change: -0.45,
+    volume: 4561234,
+    marketCap: 490000000000,
+    pe: 22.34,
+    rsi: 52.7
+  },
+  {
+    symbol: "XOM",
+    name: "Exxon Mobil Corp.",
+    sector: "Energy",
+    price: 112.34,
+    change: 1.02,
+    volume: 12345678,
+    marketCap: 460000000000,
+    pe: 14.78,
+    rsi: 59.1
   }
 ];
 
 export const MarketScreener = () => {
-  const [filteredStocks, setFilteredStocks] = useState<StockData[]>(mockStocks);
-  const [filters, setFilters] = useState<ScreenerFilters>({
-    minPrice: "",
-    maxPrice: "",
-    minVolume: "",
-    maxVolume: "",
-    minMarketCap: "",
-    maxMarketCap: "",
-    minPE: "",
-    maxPE: "",
-    sector: "All Sectors",
-    minRSI: "",
-    maxRSI: "",
-    priceAboveSMA50: false,
-    priceAboveSMA200: false,
-    goldenCross: false
-  });
   const [searchTerm, setSearchTerm] = useState("");
-  const [savedScreens, setSavedScreens] = useState<string[]>([]);
-  const [screenName, setScreenName] = useState("");
-  const { toast } = useToast();
+  const [stocks, setStocks] = useState(MOCK_STOCKS);
+  const [filteredStocks, setFilteredStocks] = useState(MOCK_STOCKS);
+  const [filters, setFilters] = useState<FilterState>({
+    sector: "all",
+    priceMin: 0,
+    priceMax: 1000,
+    marketCap: "all",
+    volume: 0,
+    peMin: 0,
+    peMax: 100,
+  });
+  const [sortBy, setSortBy] = useState<string>("price");
 
   useEffect(() => {
     applyFilters();
-  }, [filters, searchTerm]);
+  }, [sortBy]);
 
   const applyFilters = () => {
-    let filtered = mockStocks;
+    let newFilteredStocks = [...stocks];
 
-    // Search filter
     if (searchTerm) {
-      filtered = filtered.filter(stock => 
+      newFilteredStocks = newFilteredStocks.filter((stock) =>
         stock.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
         stock.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    // Price filters
-    if (filters.minPrice) {
-      filtered = filtered.filter(stock => stock.price >= parseFloat(filters.minPrice));
-    }
-    if (filters.maxPrice) {
-      filtered = filtered.filter(stock => stock.price <= parseFloat(filters.maxPrice));
+    if (filters.sector !== "all") {
+      newFilteredStocks = newFilteredStocks.filter(
+        (stock) => stock.sector === filters.sector
+      );
     }
 
-    // Volume filters
-    if (filters.minVolume) {
-      filtered = filtered.filter(stock => stock.volume >= parseInt(filters.minVolume));
-    }
-    if (filters.maxVolume) {
-      filtered = filtered.filter(stock => stock.volume <= parseInt(filters.maxVolume));
+    newFilteredStocks = newFilteredStocks.filter(
+      (stock) => stock.price >= filters.priceMin && stock.price <= filters.priceMax
+    );
+
+    if (filters.marketCap !== "all") {
+      newFilteredStocks = newFilteredStocks.filter((stock) => {
+        if (filters.marketCap === "large") {
+          return stock.marketCap > 10000000000;
+        } else if (filters.marketCap === "mid") {
+          return stock.marketCap >= 2000000000 && stock.marketCap <= 10000000000;
+        } else {
+          return stock.marketCap < 2000000000;
+        }
+      });
     }
 
-    // Market Cap filters
-    if (filters.minMarketCap) {
-      filtered = filtered.filter(stock => stock.marketCap >= parseFloat(filters.minMarketCap) * 1000000000);
-    }
-    if (filters.maxMarketCap) {
-      filtered = filtered.filter(stock => stock.marketCap <= parseFloat(filters.maxMarketCap) * 1000000000);
+    newFilteredStocks = newFilteredStocks.filter((stock) => stock.volume >= filters.volume);
+
+    newFilteredStocks = newFilteredStocks.filter(
+      (stock) => stock.pe >= filters.peMin && stock.pe <= filters.peMax
+    );
+
+    // Sorting logic
+    if (sortBy === "price") {
+      newFilteredStocks.sort((a, b) => a.price - b.price);
+    } else if (sortBy === "change") {
+      newFilteredStocks.sort((a, b) => b.change - a.change);
+    } else if (sortBy === "volume") {
+      newFilteredStocks.sort((a, b) => b.volume - a.volume);
+    } else if (sortBy === "marketCap") {
+      newFilteredStocks.sort((a, b) => b.marketCap - a.marketCap);
     }
 
-    // P/E Ratio filters
-    if (filters.minPE) {
-      filtered = filtered.filter(stock => stock.peRatio && stock.peRatio >= parseFloat(filters.minPE));
-    }
-    if (filters.maxPE) {
-      filtered = filtered.filter(stock => stock.peRatio && stock.peRatio <= parseFloat(filters.maxPE));
-    }
-
-    // Sector filter
-    if (filters.sector && filters.sector !== "All Sectors") {
-      filtered = filtered.filter(stock => stock.sector === filters.sector);
-    }
-
-    // RSI filters
-    if (filters.minRSI) {
-      filtered = filtered.filter(stock => stock.rsi && stock.rsi >= parseFloat(filters.minRSI));
-    }
-    if (filters.maxRSI) {
-      filtered = filtered.filter(stock => stock.rsi && stock.rsi <= parseFloat(filters.maxRSI));
-    }
-
-    // Technical filters
-    if (filters.priceAboveSMA50) {
-      filtered = filtered.filter(stock => stock.sma50 && stock.price > stock.sma50);
-    }
-    if (filters.priceAboveSMA200) {
-      filtered = filtered.filter(stock => stock.sma200 && stock.price > stock.sma200);
-    }
-    if (filters.goldenCross) {
-      filtered = filtered.filter(stock => stock.sma50 && stock.sma200 && stock.sma50 > stock.sma200);
-    }
-
-    setFilteredStocks(filtered);
+    setFilteredStocks(newFilteredStocks);
   };
 
-  const clearFilters = () => {
+  const handleRefresh = () => {
+    setFilteredStocks(MOCK_STOCKS);
     setFilters({
-      minPrice: "",
-      maxPrice: "",
-      minVolume: "",
-      maxVolume: "",
-      minMarketCap: "",
-      maxMarketCap: "",
-      minPE: "",
-      maxPE: "",
-      sector: "All Sectors",
-      minRSI: "",
-      maxRSI: "",
-      priceAboveSMA50: false,
-      priceAboveSMA200: false,
-      goldenCross: false
+      sector: "all",
+      priceMin: 0,
+      priceMax: 1000,
+      marketCap: "all",
+      volume: 0,
+      peMin: 0,
+      peMax: 100,
     });
     setSearchTerm("");
-  };
-
-  const saveScreen = () => {
-    if (!screenName.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter a name for your screen",
-        variant: "destructive",
-      });
-      return;
-    }
-    setSavedScreens([...savedScreens, screenName]);
-    setScreenName("");
-    toast({
-      title: "Screen Saved",
-      description: `Screen "${screenName}" has been saved successfully`,
-    });
-  };
-
-  const formatMarketCap = (marketCap: number) => {
-    if (marketCap >= 1000000000000) {
-      return `$${(marketCap / 1000000000000).toFixed(2)}T`;
-    } else if (marketCap >= 1000000000) {
-      return `$${(marketCap / 1000000000).toFixed(2)}B`;
-    } else if (marketCap >= 1000000) {
-      return `$${(marketCap / 1000000).toFixed(2)}M`;
-    }
-    return `$${marketCap.toFixed(0)}`;
-  };
-
-  const formatVolume = (volume: number) => {
-    if (volume >= 1000000) {
-      return `${(volume / 1000000).toFixed(1)}M`;
-    } else if (volume >= 1000) {
-      return `${(volume / 1000).toFixed(1)}K`;
-    }
-    return volume.toString();
+    setSortBy("price");
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="max-w-7xl mx-auto space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Market Screener</h2>
-          <p className="text-slate-600 dark:text-slate-400">
-            Discover stocks and crypto with advanced filtering and technical analysis
-          </p>
+          <h1 className="text-3xl font-bold text-white mb-2">Market Screener</h1>
+          <p className="text-slate-400">Advanced screening tools for stocks and cryptocurrencies</p>
         </div>
-        <div className="flex space-x-2">
-          <Badge variant="outline" className="text-green-600">
-            {filteredStocks.length} Results
-          </Badge>
-          <Button variant="outline" onClick={() => applyFilters()}>
+        <div className="flex items-center space-x-3">
+          <Button variant="outline" className="bg-white/5 border-white/20">
+            <Save className="w-4 h-4 mr-2" />
+            Save Screen
+          </Button>
+          <Button onClick={handleRefresh} variant="outline" className="bg-white/5 border-white/20">
             <RefreshCw className="w-4 h-4 mr-2" />
             Refresh
           </Button>
         </div>
       </div>
 
-      <Tabs defaultValue="screener" className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
+      <Tabs defaultValue="screener" className="space-y-6">
+        <TabsList className="grid grid-cols-2 h-12 bg-white/10 border border-white/20">
           <TabsTrigger value="screener">Stock Screener</TabsTrigger>
-          <TabsTrigger value="technical">Technical Analysis</TabsTrigger>
-          <TabsTrigger value="saved">Saved Screens</TabsTrigger>
+          <TabsTrigger value="crypto">Crypto Screener</TabsTrigger>
         </TabsList>
 
         <TabsContent value="screener" className="space-y-6">
-          {/* Search and Basic Filters */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center space-x-2">
-                <Search className="w-5 h-5" />
-                <span>Search & Filter</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="md:col-span-2">
-                  <label className="text-sm font-medium">Search Symbol or Company</label>
-                  <Input
-                    placeholder="Enter symbol or company name"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            {/* Filters Panel */}
+            <Card className="backdrop-blur-xl bg-white/10 border border-white/20 lg:col-span-1">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-white">
+                  <Filter className="w-5 h-5" />
+                  Filters
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Search */}
+                <div className="space-y-2">
+                  <Label className="text-slate-300">Search Symbol</Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                    <Input
+                      placeholder="e.g., AAPL, MSFT"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 bg-white/5 border-white/20"
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="text-sm font-medium">Sector</label>
+
+                {/* Sector Filter */}
+                <div className="space-y-2">
+                  <Label className="text-slate-300">Sector</Label>
                   <Select value={filters.sector} onValueChange={(value) => setFilters({...filters, sector: value})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select sector" />
+                    <SelectTrigger className="bg-white/5 border-white/20">
+                      <SelectValue placeholder="All Sectors" />
                     </SelectTrigger>
                     <SelectContent>
-                      {sectors.map((sector) => (
-                        <SelectItem key={sector} value={sector}>{sector}</SelectItem>
-                      ))}
+                      <SelectItem value="all">All Sectors</SelectItem>
+                      <SelectItem value="technology">Technology</SelectItem>
+                      <SelectItem value="healthcare">Healthcare</SelectItem>
+                      <SelectItem value="finance">Finance</SelectItem>
+                      <SelectItem value="energy">Energy</SelectItem>
+                      <SelectItem value="consumer">Consumer</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex space-x-2">
-                  <Button onClick={clearFilters} variant="outline" className="flex-1">
-                    Clear All
-                  </Button>
-                  <Button onClick={applyFilters} className="flex-1">
-                    Apply
-                  </Button>
-                </div>
-              </div>
 
-              {/* Price and Volume Filters */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Min Price ($)</label>
-                  <Input
-                    type="number"
-                    placeholder="0"
-                    value={filters.minPrice}
-                    onChange={(e) => setFilters({...filters, minPrice: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Max Price ($)</label>
-                  <Input
-                    type="number"
-                    placeholder="1000"
-                    value={filters.maxPrice}
-                    onChange={(e) => setFilters({...filters, maxPrice: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Min Volume</label>
-                  <Input
-                    type="number"
-                    placeholder="100000"
-                    value={filters.minVolume}
-                    onChange={(e) => setFilters({...filters, minVolume: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Max Volume</label>
-                  <Input
-                    type="number"
-                    placeholder="100000000"
-                    value={filters.maxVolume}
-                    onChange={(e) => setFilters({...filters, maxVolume: e.target.value})}
-                  />
-                </div>
-              </div>
-
-              {/* Market Cap and P/E Filters */}
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Min Market Cap (B)</label>
-                  <Input
-                    type="number"
-                    placeholder="1"
-                    value={filters.minMarketCap}
-                    onChange={(e) => setFilters({...filters, minMarketCap: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Max Market Cap (B)</label>
-                  <Input
-                    type="number"
-                    placeholder="3000"
-                    value={filters.maxMarketCap}
-                    onChange={(e) => setFilters({...filters, maxMarketCap: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Min P/E Ratio</label>
-                  <Input
-                    type="number"
-                    placeholder="5"
-                    value={filters.minPE}
-                    onChange={(e) => setFilters({...filters, minPE: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Max P/E Ratio</label>
-                  <Input
-                    type="number"
-                    placeholder="50"
-                    value={filters.maxPE}
-                    onChange={(e) => setFilters({...filters, maxPE: e.target.value})}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Results Table */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Screening Results</CardTitle>
-              <CardDescription>
-                {filteredStocks.length} stocks match your criteria
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Symbol</TableHead>
-                    <TableHead>Company</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>Change</TableHead>
-                    <TableHead>Volume</TableHead>
-                    <TableHead>Market Cap</TableHead>
-                    <TableHead>P/E</TableHead>
-                    <TableHead>Sector</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredStocks.map((stock) => (
-                    <TableRow key={stock.symbol} className="hover:bg-slate-50 dark:hover:bg-slate-800">
-                      <TableCell className="font-semibold">{stock.symbol}</TableCell>
-                      <TableCell>{stock.name}</TableCell>
-                      <TableCell className="font-semibold">${stock.price.toFixed(2)}</TableCell>
-                      <TableCell>
-                        <div className={`flex items-center ${stock.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {stock.change >= 0 ? <TrendingUp className="w-4 h-4 mr-1" /> : <TrendingDown className="w-4 h-4 mr-1" />}
-                          {stock.change >= 0 ? '+' : ''}{stock.change.toFixed(2)} ({stock.changePercent.toFixed(2)}%)
-                        </div>
-                      </TableCell>
-                      <TableCell>{formatVolume(stock.volume)}</TableCell>
-                      <TableCell>{formatMarketCap(stock.marketCap)}</TableCell>
-                      <TableCell>{stock.peRatio?.toFixed(1) || 'N/A'}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{stock.sector}</Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="technical" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Technical Analysis Filters</CardTitle>
-              <CardDescription>Filter stocks based on technical indicators</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium">Min RSI</label>
-                  <Input
-                    type="number"
-                    placeholder="30"
-                    value={filters.minRSI}
-                    onChange={(e) => setFilters({...filters, minRSI: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium">Max RSI</label>
-                  <Input
-                    type="number"
-                    placeholder="70"
-                    value={filters.maxRSI}
-                    onChange={(e) => setFilters({...filters, maxRSI: e.target.value})}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={filters.priceAboveSMA50}
-                    onChange={(e) => setFilters({...filters, priceAboveSMA50: e.target.checked})}
-                    className="rounded"
-                  />
-                  <span>Price above 50-day SMA</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={filters.priceAboveSMA200}
-                    onChange={(e) => setFilters({...filters, priceAboveSMA200: e.target.checked})}
-                    className="rounded"
-                  />
-                  <span>Price above 200-day SMA</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={filters.goldenCross}
-                    onChange={(e) => setFilters({...filters, goldenCross: e.target.checked})}
-                    className="rounded"
-                  />
-                  <span>Golden Cross (50-SMA > 200-SMA)</span>
-                </label>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Technical Results */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Technical Analysis Results</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Symbol</TableHead>
-                    <TableHead>Price</TableHead>
-                    <TableHead>RSI</TableHead>
-                    <TableHead>MACD</TableHead>
-                    <TableHead>50-SMA</TableHead>
-                    <TableHead>200-SMA</TableHead>
-                    <TableHead>Signals</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredStocks.map((stock) => (
-                    <TableRow key={stock.symbol}>
-                      <TableCell className="font-semibold">{stock.symbol}</TableCell>
-                      <TableCell>${stock.price.toFixed(2)}</TableCell>
-                      <TableCell>
-                        <Badge variant={stock.rsi && stock.rsi > 70 ? 'destructive' : stock.rsi && stock.rsi < 30 ? 'default' : 'outline'}>
-                          {stock.rsi?.toFixed(1)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className={stock.macd && stock.macd > 0 ? 'text-green-600' : 'text-red-600'}>
-                        {stock.macd?.toFixed(2)}
-                      </TableCell>
-                      <TableCell>${stock.sma50?.toFixed(2)}</TableCell>
-                      <TableCell>${stock.sma200?.toFixed(2)}</TableCell>
-                      <TableCell>
-                        <div className="flex space-x-1">
-                          {stock.sma50 && stock.price > stock.sma50 && (
-                            <Badge variant="default" className="text-xs">Above 50-SMA</Badge>
-                          )}
-                          {stock.sma50 && stock.sma200 && stock.sma50 > stock.sma200 && (
-                            <Badge variant="default" className="text-xs bg-yellow-500">Golden Cross</Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="saved" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Save Current Screen</CardTitle>
-              <CardDescription>Save your current filter configuration for later use</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="flex space-x-2">
-                <Input
-                  placeholder="Enter screen name"
-                  value={screenName}
-                  onChange={(e) => setScreenName(e.target.value)}
-                  className="flex-1"
-                />
-                <Button onClick={saveScreen}>
-                  <Save className="w-4 h-4 mr-2" />
-                  Save Screen
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Saved Screens</CardTitle>
-              <CardDescription>Your previously saved screening configurations</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {savedScreens.length === 0 ? (
-                <div className="text-center py-8">
-                  <Star className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-                  <p className="text-slate-600 dark:text-slate-400">No saved screens yet</p>
-                  <p className="text-sm text-slate-500">Save your favorite screening criteria to access them quickly</p>
-                </div>
-              ) : (
+                {/* Price Range */}
                 <div className="space-y-2">
-                  {savedScreens.map((screen, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 border rounded-lg">
-                      <div className="flex items-center space-x-2">
-                        <Star className="w-4 h-4 text-yellow-500" />
-                        <span className="font-medium">{screen}</span>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button size="sm" variant="outline">Load</Button>
-                        <Button size="sm" variant="outline" className="text-red-600">Delete</Button>
-                      </div>
-                    </div>
-                  ))}
+                  <Label className="text-slate-300">Price Range ($)</Label>
+                  <div className="flex space-x-2">
+                    <Input
+                      placeholder="Min"
+                      type="number"
+                      value={filters.priceMin}
+                      onChange={(e) => setFilters({...filters, priceMin: Number(e.target.value)})}
+                      className="bg-white/5 border-white/20"
+                    />
+                    <Input
+                      placeholder="Max"
+                      type="number"
+                      value={filters.priceMax}
+                      onChange={(e) => setFilters({...filters, priceMax: Number(e.target.value)})}
+                      className="bg-white/5 border-white/20"
+                    />
+                  </div>
                 </div>
-              )}
+
+                {/* Market Cap */}
+                <div className="space-y-2">
+                  <Label className="text-slate-300">Market Cap</Label>
+                  <Select value={filters.marketCap} onValueChange={(value) => setFilters({...filters, marketCap: value})}>
+                    <SelectTrigger className="bg-white/5 border-white/20">
+                      <SelectValue placeholder="All Caps" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Caps</SelectItem>
+                      <SelectItem value="large">Large Cap (&gt; $10B)</SelectItem>
+                      <SelectItem value="mid">Mid Cap ($2B - $10B)</SelectItem>
+                      <SelectItem value="small">Small Cap (&lt; $2B)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Volume */}
+                <div className="space-y-2">
+                  <Label className="text-slate-300">Min Volume</Label>
+                  <Input
+                    placeholder="e.g., 1000000"
+                    type="number"
+                    value={filters.volume}
+                    onChange={(e) => setFilters({...filters, volume: Number(e.target.value)})}
+                    className="bg-white/5 border-white/20"
+                  />
+                </div>
+
+                {/* P/E Ratio */}
+                <div className="space-y-2">
+                  <Label className="text-slate-300">P/E Ratio Range</Label>
+                  <div className="flex space-x-2">
+                    <Input
+                      placeholder="Min"
+                      type="number"
+                      value={filters.peMin}
+                      onChange={(e) => setFilters({...filters, peMin: Number(e.target.value)})}
+                      className="bg-white/5 border-white/20"
+                    />
+                    <Input
+                      placeholder="Max"
+                      type="number"
+                      value={filters.peMax}
+                      onChange={(e) => setFilters({...filters, peMax: Number(e.target.value)})}
+                      className="bg-white/5 border-white/20"
+                    />
+                  </div>
+                </div>
+
+                <Button onClick={applyFilters} className="w-full bg-blue-600 hover:bg-blue-700">
+                  Apply Filters
+                </Button>
+              </CardContent>
+            </Card>
+
+            {/* Results Panel */}
+            <div className="lg:col-span-3 space-y-6">
+              {/* Results Header */}
+              <Card className="backdrop-blur-xl bg-white/10 border border-white/20">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold text-white">
+                        {filteredStocks.length} stocks found
+                      </h3>
+                      <p className="text-sm text-slate-400">
+                        Showing results based on your criteria
+                      </p>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <Label className="text-slate-300">Sort by:</Label>
+                      <Select value={sortBy} onValueChange={setSortBy}>
+                        <SelectTrigger className="w-40 bg-white/5 border-white/20">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="price">Price</SelectItem>
+                          <SelectItem value="change">% Change</SelectItem>
+                          <SelectItem value="volume">Volume</SelectItem>
+                          <SelectItem value="marketCap">Market Cap</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Stock Results */}
+              <div className="grid gap-4">
+                {filteredStocks.map((stock) => (
+                  <Card key={stock.symbol} className="backdrop-blur-xl bg-white/10 border border-white/20 hover:bg-white/15 transition-colors">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4">
+                          <div className="w-12 h-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+                            <span className="text-white font-semibold">
+                              {stock.symbol.slice(0, 2)}
+                            </span>
+                          </div>
+                          <div>
+                            <h3 className="font-semibold text-white">{stock.symbol}</h3>
+                            <p className="text-sm text-slate-400">{stock.name}</p>
+                            <Badge variant="outline" className="mt-1 text-xs">
+                              {stock.sector}
+                            </Badge>
+                          </div>
+                        </div>
+
+                        <div className="text-right">
+                          <p className="text-2xl font-bold text-white">
+                            ${stock.price.toFixed(2)}
+                          </p>
+                          <div className={`flex items-center space-x-1 ${
+                            stock.change >= 0 ? 'text-green-400' : 'text-red-400'
+                          }`}>
+                            {stock.change >= 0 ? 
+                              <TrendingUp className="w-4 h-4" /> : 
+                              <TrendingDown className="w-4 h-4" />
+                            }
+                            <span className="font-medium">
+                              {stock.change >= 0 ? '+' : ''}{stock.change.toFixed(2)}%
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="text-right text-sm text-slate-400">
+                          <p>Volume: {(stock.volume / 1000000).toFixed(1)}M</p>
+                          <p>P/E: {stock.pe.toFixed(1)}</p>
+                          <p>RSI: {stock.rsi.toFixed(1)}</p>
+                        </div>
+
+                        <div className="flex items-center space-x-2">
+                          <Button size="sm" variant="outline" className="bg-white/5 border-white/20">
+                            <BarChart3 className="w-4 h-4" />
+                          </Button>
+                          <Button size="sm" variant="outline" className="bg-white/5 border-white/20">
+                            <Star className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="crypto" className="space-y-6">
+          <Card className="backdrop-blur-xl bg-white/10 border border-white/20">
+            <CardContent className="p-12 text-center">
+              <Activity className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+              <h3 className="text-xl font-semibold text-white mb-2">Crypto Screener</h3>
+              <p className="text-slate-400 mb-4">Advanced cryptocurrency screening coming soon</p>
+              <Button variant="outline" className="bg-white/5 border-white/20">
+                Request Early Access
+              </Button>
             </CardContent>
           </Card>
         </TabsContent>
