@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Home, MessageSquare, Wallet, Shield, Settings, Moon, Sun, Menu, X, LogOut, User, BarChart3, Newspaper, GraduationCap, Users, Bell, TrendingUp, PieChart } from "lucide-react";
+import { Home, MessageSquare, Wallet, Shield, Settings, Moon, Sun, Menu, X, LogOut, User, BarChart3, Newspaper, GraduationCap, Users, Bell, TrendingUp, PieChart, Filter } from "lucide-react";
 import { DashboardHome } from "@/components/DashboardHome";
 import { AIChat } from "@/components/AIChat";
 import { WalletViewer } from "@/components/WalletViewer";
@@ -14,6 +15,7 @@ import { SocialCommunity } from "@/components/SocialCommunity";
 import { Notifications } from "@/components/Notifications";
 import { Trading } from "@/components/Trading";
 import { PortfolioAnalytics } from "@/components/PortfolioAnalytics";
+import { MarketScreener } from "@/components/MarketScreener";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { GoalPlanning } from "@/components/GoalPlanning";
@@ -109,7 +111,7 @@ const Index = () => {
         <Tabs defaultValue="home" className="w-full">
           {/* Professional Tab Navigation */}
           <div className="mb-8">
-            <TabsList className={`grid grid-cols-3 md:grid-cols-6 lg:grid-cols-12 h-12 items-center justify-center rounded-2xl bg-white/60 dark:bg-slate-900/60 p-1 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-lg ${isMobileMenuOpen ? 'flex' : 'hidden'} md:grid overflow-x-auto`}>
+            <TabsList className={`grid grid-cols-3 md:grid-cols-6 lg:grid-cols-13 h-12 items-center justify-center rounded-2xl bg-white/60 dark:bg-slate-900/60 p-1 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-lg ${isMobileMenuOpen ? 'flex' : 'hidden'} md:grid overflow-x-auto`}>
               <TabsTrigger value="home" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
                 <Home className="w-4 h-4 mr-1" />
                 <span className="hidden sm:inline">Dashboard</span>
@@ -133,6 +135,10 @@ const Index = () => {
               <TabsTrigger value="trading" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
                 <TrendingUp className="w-4 h-4 mr-1" />
                 <span className="hidden sm:inline">Trading</span>
+              </TabsTrigger>
+              <TabsTrigger value="screener" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <Filter className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Screener</span>
               </TabsTrigger>
               <TabsTrigger value="analytics" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
                 <BarChart3 className="w-4 h-4 mr-1" />
@@ -187,6 +193,10 @@ const Index = () => {
 
           <TabsContent value="trading" className="space-y-6 mt-6">
             <Trading />
+          </TabsContent>
+
+          <TabsContent value="screener" className="space-y-6 mt-6">
+            <MarketScreener />
           </TabsContent>
 
           <TabsContent value="analytics" className="space-y-6 mt-6">
