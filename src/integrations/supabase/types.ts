@@ -73,6 +73,48 @@ export type Database = {
           },
         ]
       }
+      financial_goals: {
+        Row: {
+          category: string
+          created_at: string
+          current_amount: number | null
+          id: string
+          monthly_contribution: number | null
+          name: string
+          progress: number | null
+          target_amount: number
+          target_date: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          current_amount?: number | null
+          id?: string
+          monthly_contribution?: number | null
+          name: string
+          progress?: number | null
+          target_amount: number
+          target_date: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          current_amount?: number | null
+          id?: string
+          monthly_contribution?: number | null
+          name?: string
+          progress?: number | null
+          target_amount?: number
+          target_date?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       portfolio_holdings: {
         Row: {
           asset_type: string

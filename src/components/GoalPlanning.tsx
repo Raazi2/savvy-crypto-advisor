@@ -48,11 +48,11 @@ interface SIPCalculation {
 interface Goal {
   id: string;
   name: string;
-  targetAmount: number;
-  currentAmount: number;
-  targetDate: string;
+  target_amount: number;
+  current_amount: number;
+  target_date: string;
   category: string;
-  monthlyContribution: number;
+  monthly_contribution: number;
   progress: number;
 }
 
@@ -104,12 +104,17 @@ export const GoalPlanning = () => {
     if (!user) return;
     
     try {
-      const { data, error } = await supabase
+      // Using any type to work around TypeScript not having the new table yet
+      const { data, error } = await (supabase as any)
         .from('financial_goals')
         .select('*')
         .eq('user_id', user.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching goals:', error);
+        return;
+      }
+      
       setGoals(data || []);
     } catch (error) {
       console.error('Error fetching goals:', error);
@@ -181,7 +186,8 @@ export const GoalPlanning = () => {
     if (!user || !newGoal.name || !newGoal.targetAmount) return;
 
     try {
-      const { error } = await supabase
+      // Using any type to work around TypeScript not having the new table yet
+      const { error } = await (supabase as any)
         .from('financial_goals')
         .insert({
           user_id: user.id,
@@ -554,7 +560,7 @@ export const GoalPlanning = () => {
                   {goals.map((goal) => {
                     const category = goalCategories.find(cat => cat.value === goal.category);
                     const IconComponent = category?.icon || Target;
-                    const progress = (goal.currentAmount / goal.targetAmount) * 100;
+                    const progress = (goal.current_amount / goal.target_amount) * 100;
                     
                     return (
                       <Card key={goal.id}>
@@ -576,13 +582,13 @@ export const GoalPlanning = () => {
                           
                           <div className="space-y-2">
                             <div className="flex justify-between text-sm">
-                              <span>Current: {formatCurrency(goal.currentAmount)}</span>
-                              <span>Target: {formatCurrency(goal.targetAmount)}</span>
+                              <span>Current: {formatCurrency(goal.current_amount)}</span>
+                              <span>Target: {formatCurrency(goal.target_amount)}</span>
                             </div>
                             <Progress value={progress} className="h-2" />
                             <div className="flex justify-between text-xs text-slate-500">
-                              <span>Monthly: {formatCurrency(goal.monthlyContribution)}</span>
-                              <span>Due: {new Date(goal.targetDate).toLocaleDateString()}</span>
+                              <span>Monthly: {formatCurrency(goal.monthly_contribution)}</span>
+                              <span>Due: {new Date(goal.target_date).toLocaleDateString()}</span>
                             </div>
                           </div>
                         </CardContent>
