@@ -2,7 +2,15 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Home, MessageSquare, Wallet, Shield, Settings, Moon, Sun, Menu, X, LogOut, User, BarChart3, Newspaper, GraduationCap, Users, Bell, TrendingUp, PieChart, Filter, Lightbulb, Target, Calculator, PlayCircle } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Home, MessageSquare, Wallet, Shield, Settings, Moon, Sun, Menu, X, LogOut, User, BarChart3, Newspaper, GraduationCap, Users, Bell, TrendingUp, PieChart, Filter, Lightbulb, Target, Calculator, PlayCircle, ChevronDown } from "lucide-react";
 import { DashboardHome } from "@/components/DashboardHome";
 import { AIChat } from "@/components/AIChat";
 import { WalletViewer } from "@/components/WalletViewer";
@@ -26,6 +34,7 @@ import PaperTrading from "@/components/PaperTrading";
 const Index = () => {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState("home");
   const { user, signOut } = useAuth();
   const { toast } = useToast();
 
@@ -47,6 +56,11 @@ const Index = () => {
       title: "Signed out",
       description: "You have been successfully signed out.",
     });
+  };
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    setIsMobileMenuOpen(false);
   };
 
   return (
@@ -111,81 +125,160 @@ const Index = () => {
 
       {/* Main Content */}
       <div className="container mx-auto px-6 py-8">
-        <Tabs defaultValue="home" className="w-full">
-          {/* Professional Tab Navigation */}
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+          {/* Compact Navigation with Dropdowns */}
           <div className="mb-8">
-            <TabsList className={`grid grid-cols-3 md:grid-cols-6 lg:grid-cols-16 h-12 items-center justify-center rounded-2xl bg-white/60 dark:bg-slate-900/60 p-1 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-lg ${isMobileMenuOpen ? 'flex' : 'hidden'} md:grid overflow-x-auto`}>
-              <TabsTrigger value="home" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
-                <Home className="w-4 h-4 mr-1" />
-                <span className="hidden sm:inline">Dashboard</span>
-              </TabsTrigger>
-              <TabsTrigger value="portfolio-analytics" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
-                <PieChart className="w-4 h-4 mr-1" />
-                <span className="hidden sm:inline">Analytics</span>
-              </TabsTrigger>
-              <TabsTrigger value="goal-planning" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
-                <Target className="w-4 h-4 mr-1" />
-                <span className="hidden sm:inline">Goals</span>
-              </TabsTrigger>
-              <TabsTrigger value="investment-ideas" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
-                <Lightbulb className="w-4 h-4 mr-1" />
-                <span className="hidden sm:inline">Ideas</span>
-              </TabsTrigger>
-              <TabsTrigger value="loan-calculator" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
-                <Calculator className="w-4 h-4 mr-1" />
-                <span className="hidden sm:inline">Loans</span>
-              </TabsTrigger>
-              <TabsTrigger value="paper-trading" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
-                <PlayCircle className="w-4 h-4 mr-1" />
-                <span className="hidden sm:inline">Practice</span>
-              </TabsTrigger>
-              <TabsTrigger value="chat" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
-                <MessageSquare className="w-4 h-4 mr-1" />
-                <span className="hidden sm:inline">AI Chat</span>
-              </TabsTrigger>
-              <TabsTrigger value="wallet" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
-                <Wallet className="w-4 h-4 mr-1" />
-                <span className="hidden sm:inline">Portfolio</span>
-              </TabsTrigger>
-              <TabsTrigger value="trading" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
-                <TrendingUp className="w-4 h-4 mr-1" />
-                <span className="hidden sm:inline">Trading</span>
-              </TabsTrigger>
-              <TabsTrigger value="screener" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
-                <Filter className="w-4 h-4 mr-1" />
-                <span className="hidden sm:inline">Screener</span>
-              </TabsTrigger>
-              <TabsTrigger value="analytics" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
-                <BarChart3 className="w-4 h-4 mr-1" />
-                <span className="hidden sm:inline">Reports</span>
-              </TabsTrigger>
-              <TabsTrigger value="news" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
-                <Newspaper className="w-4 h-4 mr-1" />
-                <span className="hidden sm:inline">News</span>
-              </TabsTrigger>
-              <TabsTrigger value="education" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
-                <GraduationCap className="w-4 h-4 mr-1" />
-                <span className="hidden sm:inline">Education</span>
-              </TabsTrigger>
-              <TabsTrigger value="social" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
-                <Users className="w-4 h-4 mr-1" />
-                <span className="hidden sm:inline">Social</span>
-              </TabsTrigger>
-              <TabsTrigger value="notifications" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
-                <Bell className="w-4 h-4 mr-1" />
-                <span className="hidden sm:inline">Alerts</span>
-              </TabsTrigger>
-              <TabsTrigger value="security" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
-                <Shield className="w-4 h-4 mr-1" />
-                <span className="hidden sm:inline">Security</span>
-              </TabsTrigger>
-              <TabsTrigger value="settings" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
-                <Settings className="w-4 h-4 mr-1" />
-                <span className="hidden sm:inline">Settings</span>
-              </TabsTrigger>
-            </TabsList>
+            <div className={`flex flex-wrap gap-2 ${isMobileMenuOpen ? 'flex' : 'hidden'} md:flex`}>
+              {/* Primary Tabs */}
+              <TabsList className="h-12 items-center justify-center rounded-2xl bg-white/60 dark:bg-slate-900/60 p-1 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-lg">
+                <TabsTrigger value="home" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                  <Home className="w-4 h-4 mr-1" />
+                  <span className="hidden sm:inline">Dashboard</span>
+                </TabsTrigger>
+                <TabsTrigger value="chat" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                  <MessageSquare className="w-4 h-4 mr-1" />
+                  <span className="hidden sm:inline">AI Chat</span>
+                </TabsTrigger>
+                <TabsTrigger value="wallet" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                  <Wallet className="w-4 h-4 mr-1" />
+                  <span className="hidden sm:inline">Portfolio</span>
+                </TabsTrigger>
+              </TabsList>
+
+              {/* Analytics Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="h-12 rounded-2xl bg-white/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 backdrop-blur-xl">
+                    <BarChart3 className="w-4 h-4 mr-1" />
+                    <span className="hidden sm:inline">Analytics</span>
+                    <ChevronDown className="w-3 h-3 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                  <DropdownMenuLabel>Analytics & Reports</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handleTabChange("portfolio-analytics")}>
+                    <PieChart className="w-4 h-4 mr-2" />
+                    Portfolio Analytics
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleTabChange("analytics")}>
+                    <BarChart3 className="w-4 h-4 mr-2" />
+                    Reports
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleTabChange("screener")}>
+                    <Filter className="w-4 h-4 mr-2" />
+                    Market Screener
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Trading Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="h-12 rounded-2xl bg-white/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 backdrop-blur-xl">
+                    <TrendingUp className="w-4 h-4 mr-1" />
+                    <span className="hidden sm:inline">Trading</span>
+                    <ChevronDown className="w-3 h-3 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                  <DropdownMenuLabel>Trading & Markets</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handleTabChange("trading")}>
+                    <TrendingUp className="w-4 h-4 mr-2" />
+                    Live Trading
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleTabChange("paper-trading")}>
+                    <PlayCircle className="w-4 h-4 mr-2" />
+                    Paper Trading
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Planning Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="h-12 rounded-2xl bg-white/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 backdrop-blur-xl">
+                    <Target className="w-4 h-4 mr-1" />
+                    <span className="hidden sm:inline">Planning</span>
+                    <ChevronDown className="w-3 h-3 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                  <DropdownMenuLabel>Financial Planning</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handleTabChange("goal-planning")}>
+                    <Target className="w-4 h-4 mr-2" />
+                    Goal Planning
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleTabChange("investment-ideas")}>
+                    <Lightbulb className="w-4 h-4 mr-2" />
+                    Investment Ideas
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleTabChange("loan-calculator")}>
+                    <Calculator className="w-4 h-4 mr-2" />
+                    Loan Calculator
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* Research Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="h-12 rounded-2xl bg-white/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 backdrop-blur-xl">
+                    <Newspaper className="w-4 h-4 mr-1" />
+                    <span className="hidden sm:inline">Research</span>
+                    <ChevronDown className="w-3 h-3 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                  <DropdownMenuLabel>Research & Learning</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handleTabChange("news")}>
+                    <Newspaper className="w-4 h-4 mr-2" />
+                    News & Research
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleTabChange("education")}>
+                    <GraduationCap className="w-4 h-4 mr-2" />
+                    Education
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              {/* More Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="h-12 rounded-2xl bg-white/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 backdrop-blur-xl">
+                    <Settings className="w-4 h-4 mr-1" />
+                    <span className="hidden sm:inline">More</span>
+                    <ChevronDown className="w-3 h-3 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                  <DropdownMenuLabel>Community & Settings</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handleTabChange("social")}>
+                    <Users className="w-4 h-4 mr-2" />
+                    Social Community
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleTabChange("notifications")}>
+                    <Bell className="w-4 h-4 mr-2" />
+                    Notifications
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleTabChange("security")}>
+                    <Shield className="w-4 h-4 mr-2" />
+                    Security Center
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleTabChange("settings")}>
+                    <Settings className="w-4 h-4 mr-2" />
+                    Settings
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
+          {/* Tab Contents */}
           <TabsContent value="home" className="space-y-6 mt-6">
             <DashboardHome />
           </TabsContent>
