@@ -20,7 +20,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { GoalPlanning } from "@/components/GoalPlanning";
 import { InvestmentIdeas } from "@/components/InvestmentIdeas";
-import { LoanCalculator } from "@/components/LoanCalculator";
+import LoanCalculator from "@/components/LoanCalculator";
 import PaperTrading from "@/components/PaperTrading";
 
 const Index = () => {

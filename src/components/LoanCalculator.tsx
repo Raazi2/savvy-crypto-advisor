@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Calculator, TrendingUp, Calendar, IndianRupee, Compare, BarChart3 } from 'lucide-react';
+import { Calculator, TrendingUp, Calendar, IndianRupee, BarChart3 } from 'lucide-react';
 
 interface LoanData {
   loanAmount: number;
@@ -188,7 +188,7 @@ const LoanCalculator = () => {
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Pie>
-                  <Tooltip formatter={(value, name) => [`₹${value.toFixed(0)}`, name]} />
+                  <Tooltip formatter={(value, name) => [`₹${typeof value === 'number' ? value.toFixed(0) : value}`, name]} />
                 </PieChart>
               </ResponsiveContainer>
             </div>
