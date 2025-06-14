@@ -1,13 +1,14 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { TrendingUp, TrendingDown, DollarSign, BarChart3, Wallet, Target, Bell, Activity } from 'lucide-react';
+import { TrendingUp, TrendingDown, DollarSign, BarChart3, Wallet, Target, Bell, Activity, Brain, Zap } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
+import { AIPortfolioInsights } from './AIPortfolioInsights';
+import { RealTimeMarketDashboard } from './RealTimeMarketDashboard';
 
 interface MarketData {
   symbol: string;
@@ -27,21 +28,23 @@ export const DashboardHome = () => {
   const { user } = useAuth();
   const [marketData, setMarketData] = useState<MarketData[]>([]);
   const [portfolioSummary, setPortfolioSummary] = useState<PortfolioSummary | null>(null);
+  const [realTimeData, setRealTimeData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchDashboardData();
-    // Refresh data every 30 seconds
+    // Refresh data every 30 seconds for real-time updates
     const interval = setInterval(fetchDashboardData, 30000);
     return () => clearInterval(interval);
   }, [user]);
 
   const fetchDashboardData = async () => {
     try {
-      // Fetch market overview
-      const { data: marketOverview } = await supabase.functions.invoke('get-market-overview');
-      if (marketOverview) {
-        setMarketData(marketOverview.topStocks || []);
+      // Fetch enhanced real-time market data
+      const { data: rtData } = await supabase.functions.invoke('realtime-market-data');
+      if (rtData) {
+        setRealTimeData(rtData);
+        setMarketData(rtData.stocks?.slice(0, 8) || []);
       }
 
       // Fetch portfolio analytics if user is logged in
@@ -103,23 +106,30 @@ export const DashboardHome = () => {
 
   return (
     <div className="space-y-6">
-      {/* Welcome Section */}
+      {/* Welcome Section with AI Enhancement */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
             Welcome back{user ? `, ${user.email?.split('@')[0]}` : ''}!
           </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Here's your financial overview for today
+          <p className="text-gray-600 dark:text-gray-400 flex items-center">
+            <Zap className="w-4 h-4 mr-1" />
+            AI-powered financial insights and real-time market analysis
           </p>
         </div>
-        <Button variant="outline" size="sm">
-          <Bell className="w-4 h-4 mr-2" />
-          Alerts
-        </Button>
+        <div className="flex space-x-2">
+          <Button variant="outline" size="sm">
+            <Brain className="w-4 h-4 mr-2" />
+            AI Insights
+          </Button>
+          <Button variant="outline" size="sm">
+            <Bell className="w-4 h-4 mr-2" />
+            Alerts
+          </Button>
+        </div>
       </div>
 
-      {/* Portfolio Summary Cards */}
+      {/* Enhanced Portfolio Summary Cards with Real-time Data */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
         <Card className="border-l-4 border-l-blue-500">
           <CardHeader className="pb-2">
@@ -149,17 +159,16 @@ export const DashboardHome = () => {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
               <TrendingUp className="w-4 h-4 mr-2" />
-              Day's Gain/Loss
+              Market Sentiment
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${
-              (portfolioSummary?.dayChange || 0) >= 0 ? 'text-green-600' : 'text-red-600'
-            }`}>
-              ₹{portfolioSummary?.dayChange?.toLocaleString() || '0'}
+            <div className="text-2xl font-bold text-green-600">
+              {realTimeData?.marketOverview?.avgSentiment > 70 ? 'Bullish' :
+               realTimeData?.marketOverview?.avgSentiment > 40 ? 'Neutral' : 'Bearish'}
             </div>
             <div className="text-sm text-gray-600 dark:text-gray-400">
-              Since last close
+              AI-powered analysis
             </div>
           </CardContent>
         </Card>
@@ -185,19 +194,53 @@ export const DashboardHome = () => {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
               <Activity className="w-4 h-4 mr-2" />
-              Market Status
+              Market Volatility
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              Open
+            <div className="text-2xl font-bold">
+              {realTimeData?.marketOverview?.avgVolatility?.toFixed(1) || '0.0'}%
             </div>
             <div className="text-sm text-gray-600 dark:text-gray-400">
-              NSE & BSE
+              Real-time data
             </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* AI Portfolio Insights Section */}
+      {user && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Brain className="w-5 h-5 mr-2" />
+              AI Portfolio Insights
+            </CardTitle>
+            <CardDescription>
+              Get AI-powered analysis and recommendations for your portfolio
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AIPortfolioInsights />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Real-time Market Dashboard Section */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Activity className="w-5 h-5 mr-2" />
+            Live Market Data
+          </CardTitle>
+          <CardDescription>
+            Real-time market data with AI sentiment analysis
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <RealTimeMarketDashboard />
+        </CardContent>
+      </Card>
 
       {/* Charts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

@@ -75,15 +75,21 @@ const Index = () => {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-slate-900 dark:text-white">
-                  Fintech Advisor
+                  Fintech Advisor AI
                 </h1>
                 <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Professional Trading Platform
+                  AI-Powered Trading & Analytics Platform
                 </p>
               </div>
             </div>
 
             <div className="flex items-center space-x-3">
+              {/* Real-time status indicator */}
+              <div className="hidden md:flex items-center space-x-2 px-3 py-2 rounded-lg bg-green-100 dark:bg-green-900/20">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-sm text-green-600 dark:text-green-400">Live Data</span>
+              </div>
+
               {/* User Info */}
               <div className="hidden md:flex items-center space-x-2 px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800">
                 <User className="w-4 h-4 text-slate-600 dark:text-slate-400" />
