@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Send, Bot, User, Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Message {
   id: string;
@@ -16,10 +17,10 @@ interface Message {
 }
 
 const AI_MODELS = [
-  { id: 'gpt-4', name: 'GPT-4', provider: 'OpenAI' },
-  { id: 'claude-3', name: 'Claude 3', provider: 'Anthropic' },
-  { id: 'gemini-pro', name: 'Gemini Pro', provider: 'Google' },
-  { id: 'deepseek', name: 'DeepSeek', provider: 'DeepSeek' },
+  { id: 'microsoft/wizardlm-2-8x22b', name: 'WizardLM-2 8x22B', provider: 'Free' },
+  { id: 'nousresearch/nous-capybara-7b:free', name: 'Nous Capybara 7B', provider: 'Free' },
+  { id: 'mistralai/mistral-7b-instruct:free', name: 'Mistral 7B', provider: 'Free' },
+  { id: 'google/gemma-7b-it:free', name: 'Gemma 7B', provider: 'Free' },
 ];
 
 export const AIChat = () => {
@@ -27,12 +28,12 @@ export const AIChat = () => {
     {
       id: '1',
       role: 'assistant',
-      content: "Hello! I'm your AI financial advisor. I can help you with investment strategies, market analysis, portfolio optimization, and cybersecurity best practices. What would you like to discuss today?",
+      content: "Hello! I'm your AI financial advisor specialized in the Indian market. I can help you with investment strategies, Indian stock analysis, mutual funds, tax planning, and cybersecurity best practices. What would you like to discuss today?",
       timestamp: new Date(),
     }
   ]);
   const [input, setInput] = useState('');
-  const [selectedModel, setSelectedModel] = useState('gpt-4');
+  const [selectedModel, setSelectedModel] = useState('microsoft/wizardlm-2-8x22b');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -51,13 +52,22 @@ export const AIChat = () => {
     setLoading(true);
 
     try {
-      // Simulate AI response (replace with actual API call)
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      const { data, error } = await supabase.functions.invoke('ai-chat', {
+        body: {
+          messages: [...messages, userMessage].map(msg => ({
+            role: msg.role,
+            content: msg.content
+          })),
+          model: selectedModel
+        }
+      });
+
+      if (error) throw error;
       
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: getFinancialAdvice(input),
+        content: data.response,
         timestamp: new Date(),
       };
 
@@ -72,24 +82,6 @@ export const AIChat = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const getFinancialAdvice = (question: string): string => {
-    const lowerQ = question.toLowerCase();
-    
-    if (lowerQ.includes('invest') || lowerQ.includes('stock')) {
-      return "Based on current market conditions, I recommend diversifying your portfolio across different asset classes. Consider DCA (Dollar Cost Averaging) for long-term investments and always research fundamentals before investing. Remember: never invest more than you can afford to lose.";
-    }
-    
-    if (lowerQ.includes('crypto') || lowerQ.includes('bitcoin')) {
-      return "Cryptocurrency markets are highly volatile. Key considerations: 1) Only invest what you can afford to lose, 2) Research the technology and use cases, 3) Consider the regulatory environment, 4) Use reputable exchanges with strong security measures.";
-    }
-    
-    if (lowerQ.includes('scam') || lowerQ.includes('security')) {
-      return "🚨 Cybersecurity Alert: Always verify URLs, never share private keys, be wary of unsolicited investment opportunities, and use 2FA on all financial accounts. If something seems too good to be true, it probably is.";
-    }
-    
-    return "I'd be happy to help with your financial question! I can provide insights on investments, market analysis, portfolio management, and cybersecurity. Could you be more specific about what you'd like to know?";
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -120,7 +112,7 @@ export const AIChat = () => {
                   <SelectItem key={model.id} value={model.id}>
                     <div className="flex items-center gap-2">
                       <span>{model.name}</span>
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge variant="secondary" className="text-xs bg-green-500/20 text-green-400">
                         {model.provider}
                       </Badge>
                     </div>
@@ -206,7 +198,7 @@ export const AIChat = () => {
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyPress={handleKeyPress}
-                  placeholder="Ask about investments, crypto, security tips..."
+                  placeholder="Ask about Indian stocks, mutual funds, tax planning..."
                   className="pr-12 bg-white/5 border-white/20 backdrop-blur-sm rounded-full text-base py-6"
                   disabled={loading}
                 />
@@ -226,10 +218,10 @@ export const AIChat = () => {
       {/* Quick Prompts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {[
-          "What's the best crypto to buy today?",
-          "Analyze my portfolio risk",
-          "Is this investment opportunity a scam?",
-          "Top 3 stocks under $50 this week"
+          "Best mutual funds for SIP in 2024?",
+          "How to save tax under Section 80C?", 
+          "Should I invest in crypto in India?",
+          "Top Indian stocks under ₹500?"
         ].map((prompt, index) => (
           <Button
             key={index}
