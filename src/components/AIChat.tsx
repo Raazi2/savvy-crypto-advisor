@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Send, Bot, User, Settings } from "lucide-react";
+import { Send, Bot, User, Settings, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -17,10 +17,9 @@ interface Message {
 }
 
 const AI_MODELS = [
-  { id: 'microsoft/wizardlm-2-8x22b', name: 'WizardLM-2 8x22B', provider: 'Free' },
   { id: 'nousresearch/nous-capybara-7b:free', name: 'Nous Capybara 7B', provider: 'Free' },
   { id: 'mistralai/mistral-7b-instruct:free', name: 'Mistral 7B', provider: 'Free' },
-  { id: 'google/gemma-7b-it:free', name: 'Gemma 7B', provider: 'Free' },
+  { id: 'microsoft/wizardlm-2-8x22b', name: 'WizardLM-2 8x22B', provider: 'Free' },
 ];
 
 export const AIChat = () => {
@@ -33,7 +32,7 @@ export const AIChat = () => {
     }
   ]);
   const [input, setInput] = useState('');
-  const [selectedModel, setSelectedModel] = useState('microsoft/wizardlm-2-8x22b');
+  const [selectedModel, setSelectedModel] = useState('nousresearch/nous-capybara-7b:free');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -62,7 +61,36 @@ export const AIChat = () => {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase function error:', error);
+        throw new Error(error.message || 'Failed to get AI response');
+      }
+
+      if (data.error) {
+        console.error('AI function returned error:', data.error);
+        
+        // Handle specific errors
+        if (data.error.includes('credits exhausted')) {
+          toast({
+            title: "OpenRouter Credits Exhausted",
+            description: "Please add credits at OpenRouter or try again later.",
+            variant: "destructive",
+          });
+        } else if (data.error.includes('model is not available')) {
+          toast({
+            title: "Model Unavailable", 
+            description: "This AI model is not available. Try selecting a different model.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "AI Error",
+            description: data.error,
+            variant: "destructive",
+          });
+        }
+        return;
+      }
       
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
@@ -75,8 +103,8 @@ export const AIChat = () => {
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
-        title: "Error",
-        description: "Failed to send message. Please try again.",
+        title: "Connection Error",
+        description: "Failed to connect to AI service. Please check your internet connection and try again.",
         variant: "destructive",
       });
     } finally {
@@ -102,7 +130,7 @@ export const AIChat = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-4 flex-wrap">
             <Select value={selectedModel} onValueChange={setSelectedModel}>
               <SelectTrigger className="w-64 bg-white/5 border-white/20">
                 <SelectValue />
@@ -123,6 +151,18 @@ export const AIChat = () => {
             <Badge className="bg-green-500/20 text-green-400">
               {AI_MODELS.find(m => m.id === selectedModel)?.name} Active
             </Badge>
+          </div>
+          
+          <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-blue-300">
+                <p className="font-medium">Using Free AI Models</p>
+                <p className="text-xs opacity-80 mt-1">
+                  These models are completely free but have daily usage limits. If you encounter issues, try switching models or wait a few minutes.
+                </p>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -228,6 +268,7 @@ export const AIChat = () => {
             variant="outline"
             onClick={() => setInput(prompt)}
             className="text-left h-auto p-4 backdrop-blur-sm bg-white/5 border-white/20 hover:bg-white/10"
+            disabled={loading}
           >
             <span className="text-sm">{prompt}</span>
           </Button>

@@ -13,12 +13,22 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, model = 'microsoft/wizardlm-2-8x22b' } = await req.json();
+    const { messages, model = 'nousresearch/nous-capybara-7b:free' } = await req.json();
     
     const openRouterKey = Deno.env.get('OPENROUTER_API_KEY');
     
     if (!openRouterKey) {
-      throw new Error('OpenRouter API key not configured');
+      console.error('OpenRouter API key not configured');
+      return new Response(
+        JSON.stringify({ error: 'API key not configured. Please add your OpenRouter API key.' }),
+        { 
+          status: 500,
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json' 
+          } 
+        }
+      );
     }
 
     console.log('AI Chat request:', { messageCount: messages.length, model });
@@ -56,7 +66,48 @@ serve(async (req) => {
     if (!response.ok) {
       const errorData = await response.text();
       console.error('OpenRouter API error:', errorData);
-      throw new Error(`OpenRouter API error: ${response.status}`);
+      
+      // Handle specific error cases
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'OpenRouter credits exhausted. Please add credits at https://openrouter.ai/settings/credits or try again later.' 
+          }),
+          { 
+            status: 402,
+            headers: { 
+              ...corsHeaders, 
+              'Content-Type': 'application/json' 
+            } 
+          }
+        );
+      }
+      
+      if (response.status === 404) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Selected AI model is not available. Please try a different model.' 
+          }),
+          { 
+            status: 404,
+            headers: { 
+              ...corsHeaders, 
+              'Content-Type': 'application/json' 
+            } 
+          }
+        );
+      }
+      
+      return new Response(
+        JSON.stringify({ error: `OpenRouter API error: ${response.status}. ${errorData}` }),
+        { 
+          status: response.status,
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json' 
+          } 
+        }
+      );
     }
 
     const data = await response.json();
@@ -77,7 +128,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in AI chat function:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'Internal server error. Please try again.' }),
       { 
         status: 500,
         headers: { 
