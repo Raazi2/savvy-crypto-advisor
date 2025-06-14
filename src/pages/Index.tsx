@@ -2,12 +2,18 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Home, MessageSquare, Wallet, Shield, Settings, Moon, Sun, Menu, X, LogOut, User } from "lucide-react";
+import { Home, MessageSquare, Wallet, Shield, Settings, Moon, Sun, Menu, X, LogOut, User, BarChart3, Newspaper, GraduationCap, Users, Bell, TrendingUp } from "lucide-react";
 import { DashboardHome } from "@/components/DashboardHome";
 import { AIChat } from "@/components/AIChat";
 import { WalletViewer } from "@/components/WalletViewer";
 import { SecurityCenter } from "@/components/SecurityCenter";
 import { SettingsPanel } from "@/components/SettingsPanel";
+import { AnalyticsReports } from "@/components/AnalyticsReports";
+import { NewsResearch } from "@/components/NewsResearch";
+import { Education } from "@/components/Education";
+import { SocialCommunity } from "@/components/SocialCommunity";
+import { Notifications } from "@/components/Notifications";
+import { Trading } from "@/components/Trading";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 
@@ -102,40 +108,49 @@ const Index = () => {
         <Tabs defaultValue="home" className="w-full">
           {/* Professional Tab Navigation */}
           <div className="mb-8">
-            <TabsList className={`inline-flex h-12 items-center justify-center rounded-2xl bg-white/60 dark:bg-slate-900/60 p-1 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-lg ${isMobileMenuOpen ? 'flex' : 'hidden'} md:flex`}>
-              <TabsTrigger 
-                value="home" 
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-6 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-md dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-white"
-              >
-                <Home className="w-4 h-4 mr-2" />
+            <TabsList className={`grid grid-cols-3 md:grid-cols-5 lg:grid-cols-11 h-12 items-center justify-center rounded-2xl bg-white/60 dark:bg-slate-900/60 p-1 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-lg ${isMobileMenuOpen ? 'flex' : 'hidden'} md:grid overflow-x-auto`}>
+              <TabsTrigger value="home" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <Home className="w-4 h-4 mr-1" />
                 <span className="hidden sm:inline">Dashboard</span>
               </TabsTrigger>
-              <TabsTrigger 
-                value="chat"
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-6 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-md dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-white"
-              >
-                <MessageSquare className="w-4 h-4 mr-2" />
-                <span className="hidden sm:inline">AI Assistant</span>
+              <TabsTrigger value="chat" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <MessageSquare className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">AI Chat</span>
               </TabsTrigger>
-              <TabsTrigger 
-                value="wallet"
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-6 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-md dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-white"
-              >
-                <Wallet className="w-4 h-4 mr-2" />
+              <TabsTrigger value="wallet" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <Wallet className="w-4 h-4 mr-1" />
                 <span className="hidden sm:inline">Portfolio</span>
               </TabsTrigger>
-              <TabsTrigger 
-                value="security"
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-6 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-md dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-white"
-              >
-                <Shield className="w-4 h-4 mr-2" />
+              <TabsTrigger value="trading" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <TrendingUp className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Trading</span>
+              </TabsTrigger>
+              <TabsTrigger value="analytics" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <BarChart3 className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Analytics</span>
+              </TabsTrigger>
+              <TabsTrigger value="news" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <Newspaper className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">News</span>
+              </TabsTrigger>
+              <TabsTrigger value="education" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <GraduationCap className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Education</span>
+              </TabsTrigger>
+              <TabsTrigger value="social" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <Users className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Social</span>
+              </TabsTrigger>
+              <TabsTrigger value="notifications" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <Bell className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Alerts</span>
+              </TabsTrigger>
+              <TabsTrigger value="security" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <Shield className="w-4 h-4 mr-1" />
                 <span className="hidden sm:inline">Security</span>
               </TabsTrigger>
-              <TabsTrigger 
-                value="settings"
-                className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-6 py-2 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-md dark:data-[state=active]:bg-slate-800 dark:data-[state=active]:text-white"
-              >
-                <Settings className="w-4 h-4 mr-2" />
+              <TabsTrigger value="settings" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <Settings className="w-4 h-4 mr-1" />
                 <span className="hidden sm:inline">Settings</span>
               </TabsTrigger>
             </TabsList>
@@ -151,6 +166,30 @@ const Index = () => {
 
           <TabsContent value="wallet" className="space-y-6 mt-6">
             <WalletViewer />
+          </TabsContent>
+
+          <TabsContent value="trading" className="space-y-6 mt-6">
+            <Trading />
+          </TabsContent>
+
+          <TabsContent value="analytics" className="space-y-6 mt-6">
+            <AnalyticsReports />
+          </TabsContent>
+
+          <TabsContent value="news" className="space-y-6 mt-6">
+            <NewsResearch />
+          </TabsContent>
+
+          <TabsContent value="education" className="space-y-6 mt-6">
+            <Education />
+          </TabsContent>
+
+          <TabsContent value="social" className="space-y-6 mt-6">
+            <SocialCommunity />
+          </TabsContent>
+
+          <TabsContent value="notifications" className="space-y-6 mt-6">
+            <Notifications />
           </TabsContent>
 
           <TabsContent value="security" className="space-y-6 mt-6">
