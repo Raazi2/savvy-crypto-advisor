@@ -2,16 +2,20 @@
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Home, MessageSquare, Wallet, Shield, Settings, Moon, Sun, Menu, X } from "lucide-react";
+import { Home, MessageSquare, Wallet, Shield, Settings, Moon, Sun, Menu, X, LogOut, User } from "lucide-react";
 import { DashboardHome } from "@/components/DashboardHome";
 import { AIChat } from "@/components/AIChat";
 import { WalletViewer } from "@/components/WalletViewer";
 import { SecurityCenter } from "@/components/SecurityCenter";
 import { SettingsPanel } from "@/components/SettingsPanel";
+import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
 
 const Index = () => {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const { user, signOut } = useAuth();
+  const { toast } = useToast();
 
   useEffect(() => {
     if (isDarkMode) {
@@ -23,6 +27,14 @@ const Index = () => {
 
   const toggleTheme = () => {
     setIsDarkMode(!isDarkMode);
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    toast({
+      title: "Signed out",
+      description: "You have been successfully signed out.",
+    });
   };
 
   return (
@@ -46,6 +58,14 @@ const Index = () => {
             </div>
 
             <div className="flex items-center space-x-3">
+              {/* User Info */}
+              <div className="hidden md:flex items-center space-x-2 px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800">
+                <User className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+                <span className="text-sm text-slate-600 dark:text-slate-400">
+                  {user?.email?.split('@')[0]}
+                </span>
+              </div>
+
               <Button
                 variant="ghost"
                 size="sm"
@@ -53,6 +73,15 @@ const Index = () => {
                 className="rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800"
               >
                 {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+              </Button>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleSignOut}
+                className="rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-red-600 hover:text-red-700"
+              >
+                <LogOut className="w-4 h-4" />
               </Button>
               
               <Button
