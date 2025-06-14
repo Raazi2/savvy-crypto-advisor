@@ -1,14 +1,18 @@
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { TrendingUp, TrendingDown, DollarSign, Target, Clock, BarChart3, Activity, RefreshCw } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { TrendingUp, TrendingDown, Activity, DollarSign, BarChart3, RefreshCw } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { useToast } from '@/hooks/use-toast';
 
 interface StockData {
   symbol: string;
@@ -16,57 +20,95 @@ interface StockData {
   price: number;
   change: number;
   changePercent: number;
-  volume: string;
+  volume: number;
+  high: number;
+  low: number;
+  open: number;
 }
 
-interface MarketData {
-  index: string;
-  value: string;
-  change: string;
-  changePercent: string;
+interface Order {
+  id: string;
+  symbol: string;
+  type: 'buy' | 'sell';
+  quantity: number;
+  price: number;
+  status: 'pending' | 'executed' | 'cancelled';
+  timestamp: string;
 }
-
-const positions = [
-  { symbol: "AAPL", shares: 100, avgPrice: 175.50, currentPrice: 185.43, pnl: +993.00, pnlPercent: +5.66 },
-  { symbol: "TSLA", shares: 50, avgPrice: 255.30, currentPrice: 245.67, pnl: -481.50, pnlPercent: -3.77 },
-  { symbol: "NVDA", shares: 25, avgPrice: 420.75, currentPrice: 485.23, pnl: +1612.00, pnlPercent: +15.33 }
-];
-
-const recentTrades = [
-  { symbol: "AAPL", type: "BUY", shares: 50, price: 182.50, time: "10:30 AM", status: "Filled" },
-  { symbol: "TSLA", type: "SELL", shares: 25, price: 248.75, time: "09:45 AM", status: "Filled" },
-  { symbol: "NVDA", type: "BUY", shares: 10, price: 478.25, time: "09:15 AM", status: "Filled" },
-  { symbol: "MSFT", type: "BUY", shares: 30, price: 362.80, time: "Yesterday", status: "Filled" }
-];
 
 export const Trading = () => {
-  const [watchlist, setWatchlist] = useState<StockData[]>([]);
-  const [marketData, setMarketData] = useState<MarketData[]>([]);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [selectedStock, setSelectedStock] = useState<StockData | null>(null);
+  const [stockData, setStockData] = useState<StockData[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [orderForm, setOrderForm] = useState({
+    symbol: '',
+    type: 'buy' as 'buy' | 'sell',
+    quantity: '',
+    price: '',
+    orderType: 'market' as 'market' | 'limit'
+  });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [symbol, setSymbol] = useState("");
-  const [orderType, setOrderType] = useState("market");
-  const [quantity, setQuantity] = useState("");
-  const [price, setPrice] = useState("");
-  const { toast } = useToast();
 
   useEffect(() => {
-    fetchAllData();
-    // Refresh data every 30 seconds
-    const interval = setInterval(fetchAllData, 30000);
+    fetchTradingData();
+    // Refresh data every 10 seconds for real-time trading
+    const interval = setInterval(fetchTradingData, 10000);
     return () => clearInterval(interval);
   }, []);
 
-  const fetchAllData = async () => {
-    setRefreshing(true);
+  const fetchTradingData = async () => {
     try {
-      await Promise.all([fetchWatchlist(), fetchMarketOverview()]);
+      setRefreshing(true);
+      
+      // Fetch market data
+      const { data: marketData } = await supabase.functions.invoke('get-market-overview');
+      if (marketData?.topStocks) {
+        const enhancedStocks = marketData.topStocks.map((stock: any) => ({
+          ...stock,
+          name: getStockName(stock.symbol),
+          volume: Math.floor(Math.random() * 1000000) + 100000,
+          high: stock.price * (1 + Math.random() * 0.05),
+          low: stock.price * (1 - Math.random() * 0.05),
+          open: stock.price * (1 + (Math.random() - 0.5) * 0.02)
+        }));
+        setStockData(enhancedStocks);
+        
+        if (!selectedStock && enhancedStocks.length > 0) {
+          setSelectedStock(enhancedStocks[0]);
+        }
+      }
+
+      // Mock orders data (in real app, fetch from database)
+      setOrders([
+        {
+          id: '1',
+          symbol: 'RELIANCE',
+          type: 'buy',
+          quantity: 10,
+          price: 2450.50,
+          status: 'executed',
+          timestamp: '2024-06-14T10:30:00Z'
+        },
+        {
+          id: '2',
+          symbol: 'TCS',
+          type: 'sell',
+          quantity: 5,
+          price: 3650.75,
+          status: 'pending',
+          timestamp: '2024-06-14T11:15:00Z'
+        }
+      ]);
+
     } catch (error) {
-      console.error('Error fetching data:', error);
+      console.error('Error fetching trading data:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch market data. Please try again.",
-        variant: "destructive",
+        description: "Failed to fetch trading data",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);
@@ -74,409 +116,385 @@ export const Trading = () => {
     }
   };
 
-  const fetchWatchlist = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('get-watchlist');
-      
-      if (error) throw error;
-      
-      setWatchlist(data || []);
-    } catch (error) {
-      console.error('Error fetching watchlist:', error);
-    }
+  const getStockName = (symbol: string): string => {
+    const names: { [key: string]: string } = {
+      'RELIANCE': 'Reliance Industries Ltd',
+      'TCS': 'Tata Consultancy Services',
+      'HDFCBANK': 'HDFC Bank Limited',
+      'INFY': 'Infosys Limited',
+      'HINDUNILVR': 'Hindustan Unilever Ltd',
+      'ITC': 'ITC Limited',
+      'SBIN': 'State Bank of India',
+      'BHARTIARTL': 'Bharti Airtel Limited'
+    };
+    return names[symbol] || symbol;
   };
 
-  const fetchMarketOverview = async () => {
-    try {
-      const { data, error } = await supabase.functions.invoke('get-market-overview');
-      
-      if (error) throw error;
-      
-      setMarketData(data || []);
-    } catch (error) {
-      console.error('Error fetching market overview:', error);
-    }
-  };
-
-  const fetchStockData = async (stockSymbol: string) => {
-    try {
-      const { data, error } = await supabase.functions.invoke('get-stock-data', {
-        body: { symbol: stockSymbol }
+  const handlePlaceOrder = async () => {
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to place orders",
+        variant: "destructive"
       });
+      return;
+    }
+
+    if (!orderForm.symbol || !orderForm.quantity) {
+      toast({
+        title: "Invalid Order",
+        description: "Please fill all required fields",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    try {
+      // In a real app, this would call an API to place the order
+      const newOrder: Order = {
+        id: Math.random().toString(36).substr(2, 9),
+        symbol: orderForm.symbol,
+        type: orderForm.type,
+        quantity: parseInt(orderForm.quantity),
+        price: orderForm.orderType === 'market' ? (selectedStock?.price || 0) : parseFloat(orderForm.price),
+        status: 'pending',
+        timestamp: new Date().toISOString()
+      };
+
+      setOrders(prev => [newOrder, ...prev]);
       
-      if (error) throw error;
-      
-      return data;
+      toast({
+        title: "Order Placed",
+        description: `${orderForm.type.toUpperCase()} order for ${orderForm.quantity} shares of ${orderForm.symbol} placed successfully`,
+      });
+
+      // Reset form
+      setOrderForm({
+        symbol: '',
+        type: 'buy',
+        quantity: '',
+        price: '',
+        orderType: 'market'
+      });
+
     } catch (error) {
-      console.error('Error fetching stock data:', error);
+      console.error('Error placing order:', error);
       toast({
         title: "Error",
-        description: `Failed to fetch data for ${stockSymbol}`,
-        variant: "destructive",
+        description: "Failed to place order",
+        variant: "destructive"
       });
-      return null;
     }
   };
 
-  const handleQuickTrade = async (stockSymbol: string, action: 'buy' | 'sell') => {
-    const stockData = await fetchStockData(stockSymbol);
-    if (stockData) {
-      toast({
-        title: `${action.toUpperCase()} Order`,
-        description: `Ready to ${action} ${stockSymbol} at $${stockData.price.toFixed(2)}`,
-      });
-    }
-  };
+  const chartData = selectedStock ? [
+    { time: '09:15', price: selectedStock.open },
+    { time: '10:00', price: selectedStock.open * 1.02 },
+    { time: '11:00', price: selectedStock.open * 0.98 },
+    { time: '12:00', price: selectedStock.price },
+    { time: '13:00', price: selectedStock.price * 1.01 },
+    { time: '14:00', price: selectedStock.price * 0.99 },
+    { time: '15:30', price: selectedStock.price },
+  ] : [];
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {[...Array(3)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader>
+                <div className="h-4 bg-gray-200 rounded w-32"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-20 bg-gray-200 rounded"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-3xl font-bold text-slate-900 dark:text-white">Trading Dashboard</h2>
-          <p className="text-slate-600 dark:text-slate-400">Execute trades and monitor your positions</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Live Trading</h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Real-time trading with live market data
+          </p>
         </div>
-        <div className="flex space-x-2">
-          <Badge variant="outline" className="text-green-600">Market Open</Badge>
-          <Badge variant="outline">NYSE: 9:30 AM - 4:00 PM EST</Badge>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={fetchAllData}
-            disabled={refreshing}
-          >
-            <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-        </div>
+        <Button 
+          onClick={fetchTradingData} 
+          disabled={refreshing}
+          variant="outline"
+          size="sm"
+        >
+          <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+          Refresh
+        </Button>
       </div>
 
-      {/* Market Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        {loading ? (
-          // Loading skeleton
-          [...Array(4)].map((_, index) => (
-            <Card key={index}>
-              <CardContent className="p-4">
-                <div className="animate-pulse">
-                  <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded mb-2"></div>
-                  <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded mb-1"></div>
-                  <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Stock List */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Activity className="w-5 h-5 mr-2" />
+              Market Stocks
+            </CardTitle>
+            <CardDescription>
+              Live stock prices - updates every 10 seconds
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="max-h-96 overflow-y-auto">
+              {stockData.map((stock) => (
+                <div
+                  key={stock.symbol}
+                  className={`p-4 border-b cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors ${
+                    selectedStock?.symbol === stock.symbol ? 'bg-blue-50 dark:bg-blue-900/20' : ''
+                  }`}
+                  onClick={() => setSelectedStock(stock)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="font-medium">{stock.symbol}</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 truncate">
+                        {stock.name}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-bold">₹{stock.price?.toFixed(2)}</div>
+                      <div className={`text-sm flex items-center ${
+                        stock.changePercent >= 0 ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {stock.changePercent >= 0 ? (
+                          <TrendingUp className="w-3 h-3 mr-1" />
+                        ) : (
+                          <TrendingDown className="w-3 h-3 mr-1" />
+                        )}
+                        {stock.changePercent?.toFixed(2)}%
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))
-        ) : (
-          marketData.map((market, index) => (
-            <Card key={index}>
-              <CardContent className="p-4">
-                <div className="flex justify-between items-center">
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Stock Chart */}
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center">
+                <BarChart3 className="w-5 h-5 mr-2" />
+                {selectedStock?.symbol} - {selectedStock?.name}
+              </div>
+              <Badge variant={selectedStock && selectedStock.changePercent >= 0 ? "default" : "destructive"}>
+                {selectedStock?.changePercent >= 0 ? '+' : ''}{selectedStock?.changePercent?.toFixed(2)}%
+              </Badge>
+            </CardTitle>
+            <CardDescription>
+              Intraday price movement
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {selectedStock && (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   <div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">{market.index}</p>
-                    <p className="text-lg font-bold">{market.value}</p>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Current Price</p>
+                    <p className="text-lg font-bold">₹{selectedStock.price.toFixed(2)}</p>
                   </div>
-                  <div className="text-right">
-                    <p className={`text-sm font-semibold ${market.change.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
-                      {market.change}
-                    </p>
-                    <p className={`text-xs ${market.changePercent.startsWith('+') ? 'text-green-600' : 'text-red-600'}`}>
-                      {market.changePercent}
-                    </p>
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Day High</p>
+                    <p className="text-lg font-bold text-green-600">₹{selectedStock.high.toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Day Low</p>
+                    <p className="text-lg font-bold text-red-600">₹{selectedStock.low.toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Volume</p>
+                    <p className="text-lg font-bold">{selectedStock.volume.toLocaleString()}</p>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
+
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={chartData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="time" />
+                    <YAxis domain={['dataMin - 10', 'dataMax + 10']} />
+                    <Tooltip formatter={(value) => [`₹${value}`, 'Price']} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="price" 
+                      stroke={selectedStock.changePercent >= 0 ? "#22c55e" : "#ef4444"}
+                      strokeWidth={2}
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
-      <Tabs defaultValue="trade" className="w-full">
-        <TabsList className="grid w-full grid-cols-5">
-          <TabsTrigger value="trade">Trade</TabsTrigger>
-          <TabsTrigger value="positions">Positions</TabsTrigger>
-          <TabsTrigger value="watchlist">Watchlist</TabsTrigger>
-          <TabsTrigger value="orders">Orders</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
+      <Tabs defaultValue="place-order" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="place-order">Place Order</TabsTrigger>
+          <TabsTrigger value="order-history">Order History</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="trade" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Place Order</CardTitle>
-                  <CardDescription>Buy or sell stocks and crypto</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div>
-                    <label className="text-sm font-medium">Symbol</label>
-                    <Input 
-                      placeholder="Enter symbol (e.g., AAPL)" 
-                      value={symbol}
-                      onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-                    />
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-2">
-                    <Button variant="default" className="bg-green-600 hover:bg-green-700">
-                      BUY
-                    </Button>
-                    <Button variant="outline" className="border-red-600 text-red-600 hover:bg-red-50">
-                      SELL
-                    </Button>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium">Order Type</label>
-                    <Select value={orderType} onValueChange={setOrderType}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Market Order" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="market">Market Order</SelectItem>
-                        <SelectItem value="limit">Limit Order</SelectItem>
-                        <SelectItem value="stop">Stop Order</SelectItem>
-                        <SelectItem value="stop-limit">Stop-Limit Order</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium">Quantity</label>
-                    <Input 
-                      type="number" 
-                      placeholder="Number of shares" 
-                      value={quantity}
-                      onChange={(e) => setQuantity(e.target.value)}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-sm font-medium">Price</label>
-                    <Input 
-                      type="number" 
-                      placeholder="Limit price (optional)" 
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                    />
-                  </div>
-
-                  <div className="pt-4 border-t">
-                    <div className="flex justify-between text-sm mb-2">
-                      <span>Estimated Cost</span>
-                      <span className="font-semibold">
-                        ${quantity && price ? (parseFloat(quantity) * parseFloat(price)).toFixed(2) : '0.00'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm mb-4">
-                      <span>Buying Power</span>
-                      <span className="font-semibold text-green-600">$25,480.50</span>
-                    </div>
-                    <Button className="w-full">Review Order</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="lg:col-span-2">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Quick Trade</CardTitle>
-                  <CardDescription>Popular stocks with live prices</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {loading ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {[...Array(4)].map((_, i) => (
-                        <div key={i} className="animate-pulse p-4 border rounded-lg">
-                          <div className="h-6 bg-slate-200 dark:bg-slate-700 rounded mb-2"></div>
-                          <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded mb-2"></div>
-                          <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded"></div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {watchlist.slice(0, 4).map((stock, index) => (
-                        <div key={index} className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                          <div>
-                            <div className="font-semibold">{stock.symbol}</div>
-                            <div className="text-sm text-slate-600 dark:text-slate-400">{stock.name}</div>
-                            <div className="text-lg font-bold">${stock.price.toFixed(2)}</div>
-                            <div className={`text-sm ${stock.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                              {stock.change >= 0 ? '+' : ''}{stock.change.toFixed(2)} ({stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%)
-                            </div>
-                          </div>
-                          <div className="flex flex-col space-y-2">
-                            <Button 
-                              size="sm" 
-                              className="bg-green-600 hover:bg-green-700"
-                              onClick={() => handleQuickTrade(stock.symbol, 'buy')}
-                            >
-                              Buy
-                            </Button>
-                            <Button 
-                              size="sm" 
-                              variant="outline"
-                              onClick={() => handleQuickTrade(stock.symbol, 'sell')}
-                            >
-                              Sell
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </TabsContent>
-
-        <TabsContent value="positions" className="space-y-6">
+        <TabsContent value="place-order">
           <Card>
             <CardHeader>
-              <CardTitle>Current Positions</CardTitle>
-              <CardDescription>Your active stock and crypto holdings</CardDescription>
+              <CardTitle className="flex items-center">
+                <DollarSign className="w-5 h-5 mr-2" />
+                Place Order
+              </CardTitle>
+              <CardDescription>
+                Place buy or sell orders for stocks
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {positions.map((position, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <div>
-                        <div className="font-semibold text-lg">{position.symbol}</div>
-                        <div className="text-sm text-slate-600 dark:text-slate-400">
-                          {position.shares} shares @ ${position.avgPrice.toFixed(2)}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold">${position.currentPrice.toFixed(2)}</div>
-                      <div className={`text-sm font-semibold ${position.pnl >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        {position.pnl >= 0 ? '+' : ''}${position.pnl.toFixed(2)} ({position.pnlPercent >= 0 ? '+' : ''}{position.pnlPercent.toFixed(2)}%)
-                      </div>
-                    </div>
-                    <div className="flex space-x-2">
-                      <Button size="sm" variant="outline">Add</Button>
-                      <Button size="sm" variant="outline" className="text-red-600">Sell</Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="watchlist" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <CardTitle>Watchlist</CardTitle>
-                  <CardDescription>Stocks you're tracking with live prices</CardDescription>
+                  <Label htmlFor="symbol">Stock Symbol</Label>
+                  <Select value={orderForm.symbol} onValueChange={(value) => 
+                    setOrderForm(prev => ({ ...prev, symbol: value }))
+                  }>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select stock" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {stockData.map((stock) => (
+                        <SelectItem key={stock.symbol} value={stock.symbol}>
+                          {stock.symbol} - ₹{stock.price.toFixed(2)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
-                <Button>Add Symbol</Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="space-y-3">
-                  {[...Array(5)].map((_, i) => (
-                    <div key={i} className="animate-pulse p-4 border rounded-lg">
-                      <div className="flex justify-between">
-                        <div className="space-y-2">
-                          <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-16"></div>
-                          <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-24"></div>
-                        </div>
-                        <div className="space-y-2">
-                          <div className="h-4 bg-slate-200 dark:bg-slate-700 rounded w-20"></div>
-                          <div className="h-3 bg-slate-200 dark:bg-slate-700 rounded w-16"></div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {watchlist.map((stock, index) => (
-                    <div key={index} className="flex items-center justify-between p-4 border rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
-                      <div className="flex items-center space-x-4">
-                        <div>
-                          <div className="font-semibold">{stock.symbol}</div>
-                          <div className="text-sm text-slate-600 dark:text-slate-400">{stock.name}</div>
-                        </div>
-                      </div>
-                      <div className="flex items-center space-x-4">
-                        <div className="text-sm text-slate-600 dark:text-slate-400">Vol: {stock.volume}</div>
-                        <div className="text-right">
-                          <div className="font-bold">${stock.price.toFixed(2)}</div>
-                          <div className={`text-sm ${stock.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                            {stock.change >= 0 ? '+' : ''}{stock.change.toFixed(2)} ({stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%)
-                          </div>
-                        </div>
-                        <div className="flex space-x-2">
-                          <Button 
-                            size="sm" 
-                            className="bg-green-600 hover:bg-green-700"
-                            onClick={() => handleQuickTrade(stock.symbol, 'buy')}
-                          >
-                            Buy
-                          </Button>
-                          <Button size="sm" variant="outline">Chart</Button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
 
-        <TabsContent value="orders" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Open Orders</CardTitle>
-              <CardDescription>Pending and working orders</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-8">
-                <Target className="w-16 h-16 text-slate-400 mx-auto mb-4" />
-                <p className="text-slate-600 dark:text-slate-400">No open orders</p>
-                <p className="text-sm text-slate-500">Your pending orders will appear here</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                <div>
+                  <Label htmlFor="type">Order Type</Label>
+                  <Select value={orderForm.type} onValueChange={(value: 'buy' | 'sell') => 
+                    setOrderForm(prev => ({ ...prev, type: value }))
+                  }>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="buy">Buy</SelectItem>
+                      <SelectItem value="sell">Sell</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-        <TabsContent value="history" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Trade History</CardTitle>
-              <CardDescription>Your recent trading activity</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {recentTrades.map((trade, index) => (
-                  <div key={index} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-4">
-                      <Badge variant={trade.type === 'BUY' ? 'default' : 'destructive'}>
-                        {trade.type}
-                      </Badge>
-                      <div>
-                        <div className="font-semibold">{trade.symbol}</div>
-                        <div className="text-sm text-slate-600 dark:text-slate-400">
-                          {trade.shares} shares @ ${trade.price.toFixed(2)}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm text-slate-600 dark:text-slate-400">{trade.time}</div>
-                      <Badge variant="outline" className="text-green-600">{trade.status}</Badge>
-                    </div>
+                <div>
+                  <Label htmlFor="quantity">Quantity</Label>
+                  <Input
+                    type="number"
+                    value={orderForm.quantity}
+                    onChange={(e) => setOrderForm(prev => ({ ...prev, quantity: e.target.value }))}
+                    placeholder="Enter quantity"
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="orderType">Price Type</Label>
+                  <Select value={orderForm.orderType} onValueChange={(value: 'market' | 'limit') => 
+                    setOrderForm(prev => ({ ...prev, orderType: value }))
+                  }>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="market">Market Price</SelectItem>
+                      <SelectItem value="limit">Limit Price</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {orderForm.orderType === 'limit' && (
+                  <div>
+                    <Label htmlFor="price">Limit Price</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={orderForm.price}
+                      onChange={(e) => setOrderForm(prev => ({ ...prev, price: e.target.value }))}
+                      placeholder="Enter price"
+                    />
                   </div>
-                ))}
+                )}
               </div>
+
+              <Button 
+                onClick={handlePlaceOrder} 
+                className="w-full mt-6"
+                variant={orderForm.type === 'buy' ? 'default' : 'destructive'}
+              >
+                Place {orderForm.type.toUpperCase()} Order
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="order-history">
+          <Card>
+            <CardHeader>
+              <CardTitle>Order History</CardTitle>
+              <CardDescription>
+                Your recent trading orders
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Symbol</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Quantity</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Time</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {orders.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium">{order.symbol}</TableCell>
+                      <TableCell>
+                        <Badge variant={order.type === 'buy' ? 'default' : 'destructive'}>
+                          {order.type.toUpperCase()}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{order.quantity}</TableCell>
+                      <TableCell>₹{order.price.toFixed(2)}</TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={
+                            order.status === 'executed' ? 'default' : 
+                            order.status === 'pending' ? 'secondary' : 'destructive'
+                          }
+                        >
+                          {order.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        {new Date(order.timestamp).toLocaleString()}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>

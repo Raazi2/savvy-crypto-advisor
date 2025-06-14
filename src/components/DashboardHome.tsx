@@ -1,259 +1,335 @@
 
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ArrowUp, ArrowDown, DollarSign, TrendingUp, Activity, RefreshCw } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Progress } from '@/components/ui/progress';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import { TrendingUp, TrendingDown, DollarSign, BarChart3, Wallet, Target, Bell, Activity } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
 
-interface CryptoData {
-  id: string;
-  name: string;
-  current_price: number;
-  price_change_percentage_24h: number;
-  market_cap: number;
+interface MarketData {
   symbol: string;
+  price: number;
+  change: number;
+  changePercent: number;
+}
+
+interface PortfolioSummary {
+  totalValue: number;
+  dayChange: number;
+  dayChangePercent: number;
+  holdings: number;
 }
 
 export const DashboardHome = () => {
-  const [cryptoData, setCryptoData] = useState<CryptoData[]>([]);
+  const { user } = useAuth();
+  const [marketData, setMarketData] = useState<MarketData[]>([]);
+  const [portfolioSummary, setPortfolioSummary] = useState<PortfolioSummary | null>(null);
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const { toast } = useToast();
 
   useEffect(() => {
-    fetchCryptoData();
-    const interval = setInterval(fetchCryptoData, 60000);
+    fetchDashboardData();
+    // Refresh data every 30 seconds
+    const interval = setInterval(fetchDashboardData, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [user]);
 
-  const fetchCryptoData = async () => {
-    setRefreshing(true);
+  const fetchDashboardData = async () => {
     try {
-      const response = await fetch(
-        'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=8&page=1'
-      );
-      const data = await response.json();
-      setCryptoData(data);
-      setLoading(false);
+      // Fetch market overview
+      const { data: marketOverview } = await supabase.functions.invoke('get-market-overview');
+      if (marketOverview) {
+        setMarketData(marketOverview.topStocks || []);
+      }
+
+      // Fetch portfolio analytics if user is logged in
+      if (user) {
+        const { data: portfolioData } = await supabase.functions.invoke('portfolio-analytics', {
+          body: { userId: user.id }
+        });
+        if (portfolioData) {
+          setPortfolioSummary({
+            totalValue: portfolioData.totalValue || 0,
+            dayChange: portfolioData.totalGainLoss || 0,
+            dayChangePercent: portfolioData.totalGainLossPercent || 0,
+            holdings: portfolioData.holdings?.length || 0
+          });
+        }
+      }
     } catch (error) {
-      console.error('Error fetching crypto data:', error);
-      toast({
-        title: "Connection Error",
-        description: "Unable to fetch market data. Please check your connection.",
-        variant: "destructive",
-      });
-      setLoading(false);
+      console.error('Error fetching dashboard data:', error);
     } finally {
-      setRefreshing(false);
+      setLoading(false);
     }
   };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: price < 1 ? 4 : 2,
-      maximumFractionDigits: price < 1 ? 4 : 2,
-    }).format(price);
-  };
+  const performanceData = [
+    { month: 'Jan', portfolio: 95000, market: 98000 },
+    { month: 'Feb', portfolio: 97000, market: 96000 },
+    { month: 'Mar', portfolio: 102000, market: 101000 },
+    { month: 'Apr', portfolio: 105000, market: 103000 },
+    { month: 'May', portfolio: 108000, market: 105000 },
+    { month: 'Jun', portfolio: 112000, market: 107000 },
+  ];
 
-  const formatMarketCap = (marketCap: number) => {
-    if (marketCap >= 1e12) return `$${(marketCap / 1e12).toFixed(2)}T`;
-    if (marketCap >= 1e9) return `$${(marketCap / 1e9).toFixed(2)}B`;
-    if (marketCap >= 1e6) return `$${(marketCap / 1e6).toFixed(2)}M`;
-    return `$${marketCap.toLocaleString()}`;
-  };
+  const assetAllocation = [
+    { name: 'Stocks', value: 65, color: '#0088FE' },
+    { name: 'Bonds', value: 20, color: '#00C49F' },
+    { name: 'ETFs', value: 10, color: '#FFBB28' },
+    { name: 'Cash', value: 5, color: '#FF8042' },
+  ];
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          {[...Array(4)].map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardHeader className="pb-2">
+                <div className="h-4 bg-gray-200 rounded w-24"></div>
+              </CardHeader>
+              <CardContent>
+                <div className="h-8 bg-gray-200 rounded w-32 mb-2"></div>
+                <div className="h-3 bg-gray-200 rounded w-16"></div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-8">
-      {/* Hero Section */}
-      <div className="text-center space-y-4">
-        <h1 className="text-4xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-6xl">
-          Professional
-          <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
-            Trading Hub
-          </span>
-        </h1>
-        <p className="text-lg leading-8 text-slate-600 dark:text-slate-300 max-w-2xl mx-auto">
-          Advanced financial analytics, AI-powered insights, and real-time market data 
-          for professional traders and investors.
-        </p>
+    <div className="space-y-6">
+      {/* Welcome Section */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
+            Welcome back{user ? `, ${user.email?.split('@')[0]}` : ''}!
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Here's your financial overview for today
+          </p>
+        </div>
+        <Button variant="outline" size="sm">
+          <Bell className="w-4 h-4 mr-2" />
+          Alerts
+        </Button>
       </div>
 
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        <Card className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-slate-200 dark:border-slate-800 shadow-xl">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <div className="p-3 bg-green-100 dark:bg-green-900/30 rounded-xl">
-                <DollarSign className="w-6 h-6 text-green-600 dark:text-green-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Live Market Data</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">Real-time</p>
-              </div>
+      {/* Portfolio Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <Card className="border-l-4 border-l-blue-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+              <Wallet className="w-4 h-4 mr-2" />
+              Portfolio Value
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              ₹{portfolioSummary?.totalValue.toLocaleString() || '0'}
+            </div>
+            <div className={`text-sm flex items-center ${
+              (portfolioSummary?.dayChangePercent || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+            }`}>
+              {(portfolioSummary?.dayChangePercent || 0) >= 0 ? (
+                <TrendingUp className="w-3 h-3 mr-1" />
+              ) : (
+                <TrendingDown className="w-3 h-3 mr-1" />
+              )}
+              {portfolioSummary?.dayChangePercent?.toFixed(2) || '0.00'}% today
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-slate-200 dark:border-slate-800 shadow-xl">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-xl">
-                <TrendingUp className="w-6 h-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">AI Analysis</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">Advanced</p>
-              </div>
+        <Card className="border-l-4 border-l-green-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+              <TrendingUp className="w-4 h-4 mr-2" />
+              Day's Gain/Loss
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${
+              (portfolioSummary?.dayChange || 0) >= 0 ? 'text-green-600' : 'text-red-600'
+            }`}>
+              ₹{portfolioSummary?.dayChange?.toLocaleString() || '0'}
+            </div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Since last close
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-slate-200 dark:border-slate-800 shadow-xl sm:col-span-2 lg:col-span-1">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-4">
-              <div className="p-3 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
-                <Activity className="w-6 h-6 text-purple-600 dark:text-purple-400" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-slate-600 dark:text-slate-400">Trading Tools</p>
-                <p className="text-2xl font-bold text-slate-900 dark:text-white">Professional</p>
-              </div>
+        <Card className="border-l-4 border-l-purple-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Holdings
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">
+              {portfolioSummary?.holdings || 0}
+            </div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Active positions
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-l-4 border-l-orange-500">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-gray-600 dark:text-gray-400 flex items-center">
+              <Activity className="w-4 h-4 mr-2" />
+              Market Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">
+              Open
+            </div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              NSE & BSE
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Market Data */}
-      <Card className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl border-slate-200 dark:border-slate-800 shadow-xl">
-        <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-xl font-bold text-slate-900 dark:text-white">
-                Live Market Overview
-              </CardTitle>
-              <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
-                Real-time cryptocurrency prices and market data
-              </p>
-            </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={fetchCryptoData}
-              disabled={refreshing}
-              className="rounded-xl border-slate-200 dark:border-slate-700"
-            >
-              <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-              Refresh
-            </Button>
-          </div>
-        </CardHeader>
-        <CardContent className="p-6 pt-0">
-          {loading ? (
-            <div className="space-y-4">
-              {[...Array(4)].map((_, i) => (
-                <div key={i} className="flex items-center justify-between p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 animate-pulse">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-slate-200 dark:bg-slate-700 rounded-full"></div>
-                    <div className="space-y-2">
-                      <div className="w-24 h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
-                      <div className="w-16 h-3 bg-slate-200 dark:bg-slate-700 rounded"></div>
-                    </div>
-                  </div>
-                  <div className="text-right space-y-2">
-                    <div className="w-20 h-4 bg-slate-200 dark:bg-slate-700 rounded"></div>
-                    <div className="w-16 h-3 bg-slate-200 dark:bg-slate-700 rounded"></div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {cryptoData.map((coin) => (
-                <div 
-                  key={coin.id} 
-                  className="flex items-center justify-between p-4 rounded-xl bg-slate-50/80 dark:bg-slate-800/50 hover:bg-slate-100/80 dark:hover:bg-slate-800/80 transition-all duration-200 border border-slate-200/50 dark:border-slate-700/50"
+      {/* Charts Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Portfolio Performance */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <TrendingUp className="w-5 h-5 mr-2" />
+              Portfolio Performance
+            </CardTitle>
+            <CardDescription>
+              Portfolio vs Market benchmark over 6 months
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={performanceData}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis dataKey="month" />
+                <YAxis />
+                <Tooltip formatter={(value) => [`₹${value?.toLocaleString()}`, '']} />
+                <Line 
+                  type="monotone" 
+                  dataKey="portfolio" 
+                  stroke="#0088FE" 
+                  strokeWidth={2}
+                  name="Portfolio"
+                />
+                <Line 
+                  type="monotone" 
+                  dataKey="market" 
+                  stroke="#82ca9d" 
+                  strokeWidth={2}
+                  name="Market"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        {/* Asset Allocation */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <BarChart3 className="w-5 h-5 mr-2" />
+              Asset Allocation
+            </CardTitle>
+            <CardDescription>
+              Current portfolio distribution
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={assetAllocation}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={({ name, value }) => `${name}: ${value}%`}
+                  outerRadius={80}
+                  fill="#8884d8"
+                  dataKey="value"
                 >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center text-sm font-bold text-white shadow-lg">
-                      {coin.symbol.toUpperCase().slice(0, 2)}
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-slate-900 dark:text-white">{coin.name}</h4>
-                      <p className="text-sm text-slate-500 dark:text-slate-400 uppercase font-medium">{coin.symbol}</p>
-                    </div>
-                  </div>
-                  
-                  <div className="text-right">
-                    <p className="font-bold text-slate-900 dark:text-white">{formatPrice(coin.current_price)}</p>
-                    <div className="flex items-center justify-end space-x-1">
-                      {coin.price_change_percentage_24h >= 0 ? (
-                        <ArrowUp className="w-3 h-3 text-green-500" />
-                      ) : (
-                        <ArrowDown className="w-3 h-3 text-red-500" />
-                      )}
-                      <span 
-                        className={`text-sm font-medium ${
-                          coin.price_change_percentage_24h >= 0 ? 'text-green-500' : 'text-red-500'
-                        }`}
-                      >
-                        {Math.abs(coin.price_change_percentage_24h).toFixed(2)}%
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <Badge variant="secondary" className="bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-0">
-                    {formatMarketCap(coin.market_cap)}
+                  {assetAllocation.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Market Movers */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <Activity className="w-5 h-5 mr-2" />
+            Top Market Movers
+          </CardTitle>
+          <CardDescription>
+            Live market data - updates every 30 seconds
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {marketData.slice(0, 8).map((stock, index) => (
+              <div key={index} className="p-4 border rounded-lg hover:shadow-md transition-shadow">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-medium">{stock.symbol}</h3>
+                  <Badge variant={stock.changePercent >= 0 ? "default" : "destructive"}>
+                    {stock.changePercent >= 0 ? '+' : ''}{stock.changePercent?.toFixed(2)}%
                   </Badge>
                 </div>
-              ))}
-            </div>
-          )}
+                <div className="text-lg font-bold">₹{stock.price?.toFixed(2) || 'N/A'}</div>
+                <div className={`text-sm ${stock.change >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {stock.change >= 0 ? '+' : ''}₹{stock.change?.toFixed(2) || '0.00'}
+                </div>
+              </div>
+            ))}
+          </div>
         </CardContent>
       </Card>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-blue-200 dark:border-blue-800 shadow-xl hover:shadow-2xl transition-all duration-300">
-          <CardContent className="p-6">
-            <div className="space-y-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
-                <TrendingUp className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">AI Financial Advisor</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-300 mt-2">
-                  Get personalized investment strategies and market insights powered by advanced AI models.
-                </p>
-              </div>
-              <Button className="w-full bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 text-white shadow-lg">
-                Start AI Chat
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/30 dark:to-pink-950/30 border-purple-200 dark:border-purple-800 shadow-xl hover:shadow-2xl transition-all duration-300">
-          <CardContent className="p-6">
-            <div className="space-y-4">
-              <div className="w-12 h-12 bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
-                <Activity className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">Portfolio Analytics</h3>
-                <p className="text-sm text-slate-600 dark:text-slate-300 mt-2">
-                  Connect your wallet to view detailed portfolio analysis and risk assessment.
-                </p>
-              </div>
-              <Button variant="outline" className="w-full border-purple-200 dark:border-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950/30">
-                Connect Wallet
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Button variant="outline" className="h-20 flex flex-col">
+              <DollarSign className="w-6 h-6 mb-2" />
+              Buy Stocks
+            </Button>
+            <Button variant="outline" className="h-20 flex flex-col">
+              <BarChart3 className="w-6 h-6 mb-2" />
+              View Analytics
+            </Button>
+            <Button variant="outline" className="h-20 flex flex-col">
+              <Target className="w-6 h-6 mb-2" />
+              Set Goals
+            </Button>
+            <Button variant="outline" className="h-20 flex flex-col">
+              <Activity className="w-6 h-6 mb-2" />
+              Paper Trade
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
