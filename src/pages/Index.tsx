@@ -16,6 +16,7 @@ import { Trading } from "@/components/Trading";
 import { PortfolioAnalytics } from "@/components/PortfolioAnalytics";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { GoalPlanning } from "@/components/GoalPlanning";
 
 const Index = () => {
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -117,6 +118,10 @@ const Index = () => {
                 <PieChart className="w-4 h-4 mr-1" />
                 <span className="hidden sm:inline">Analytics</span>
               </TabsTrigger>
+              <TabsTrigger value="goal-planning" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <GraduationCap className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Goal Planning</span>
+              </TabsTrigger>
               <TabsTrigger value="chat" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
                 <MessageSquare className="w-4 h-4 mr-1" />
                 <span className="hidden sm:inline">AI Chat</span>
@@ -166,6 +171,10 @@ const Index = () => {
 
           <TabsContent value="portfolio-analytics" className="space-y-6 mt-6">
             <PortfolioAnalytics />
+          </TabsContent>
+
+          <TabsContent value="goal-planning" className="space-y-6 mt-6">
+            <GoalPlanning />
           </TabsContent>
 
           <TabsContent value="chat" className="space-y-6 mt-6">
