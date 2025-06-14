@@ -1,7 +1,8 @@
+
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Home, MessageSquare, Wallet, Shield, Settings, Moon, Sun, Menu, X, LogOut, User, BarChart3, Newspaper, GraduationCap, Users, Bell, TrendingUp, PieChart, Filter, Lightbulb, Target } from "lucide-react";
+import { Home, MessageSquare, Wallet, Shield, Settings, Moon, Sun, Menu, X, LogOut, User, BarChart3, Newspaper, GraduationCap, Users, Bell, TrendingUp, PieChart, Filter, Lightbulb, Target, Calculator } from "lucide-react";
 import { DashboardHome } from "@/components/DashboardHome";
 import { AIChat } from "@/components/AIChat";
 import { WalletViewer } from "@/components/WalletViewer";
@@ -19,6 +20,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { GoalPlanning } from "@/components/GoalPlanning";
 import { InvestmentIdeas } from "@/components/InvestmentIdeas";
+import { LoanCalculator } from "@/components/LoanCalculator";
 
 const Index = () => {
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -111,7 +113,7 @@ const Index = () => {
         <Tabs defaultValue="home" className="w-full">
           {/* Professional Tab Navigation */}
           <div className="mb-8">
-            <TabsList className={`grid grid-cols-3 md:grid-cols-6 lg:grid-cols-14 h-12 items-center justify-center rounded-2xl bg-white/60 dark:bg-slate-900/60 p-1 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-lg ${isMobileMenuOpen ? 'flex' : 'hidden'} md:grid overflow-x-auto`}>
+            <TabsList className={`grid grid-cols-3 md:grid-cols-6 lg:grid-cols-15 h-12 items-center justify-center rounded-2xl bg-white/60 dark:bg-slate-900/60 p-1 border border-slate-200 dark:border-slate-800 backdrop-blur-xl shadow-lg ${isMobileMenuOpen ? 'flex' : 'hidden'} md:grid overflow-x-auto`}>
               <TabsTrigger value="home" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
                 <Home className="w-4 h-4 mr-1" />
                 <span className="hidden sm:inline">Dashboard</span>
@@ -127,6 +129,10 @@ const Index = () => {
               <TabsTrigger value="investment-ideas" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
                 <Lightbulb className="w-4 h-4 mr-1" />
                 <span className="hidden sm:inline">Ideas</span>
+              </TabsTrigger>
+              <TabsTrigger value="loan-calculator" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
+                <Calculator className="w-4 h-4 mr-1" />
+                <span className="hidden sm:inline">Loans</span>
               </TabsTrigger>
               <TabsTrigger value="chat" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
                 <MessageSquare className="w-4 h-4 mr-1" />
@@ -189,6 +195,10 @@ const Index = () => {
 
           <TabsContent value="investment-ideas" className="space-y-6 mt-6">
             <InvestmentIdeas />
+          </TabsContent>
+
+          <TabsContent value="loan-calculator" className="space-y-6 mt-6">
+            <LoanCalculator />
           </TabsContent>
 
           <TabsContent value="chat" className="space-y-6 mt-6">
