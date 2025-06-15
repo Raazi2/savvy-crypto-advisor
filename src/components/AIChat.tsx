@@ -17,10 +17,14 @@ interface Message {
 }
 
 const AI_MODELS = [
-  { id: 'mistralai/mistral-7b-instruct:free', name: 'Mistral 7B Instruct', provider: 'Free' },
-  { id: 'microsoft/wizardlm-2-8x22b', name: 'WizardLM-2 8x22B', provider: 'Free' },
-  { id: 'meta-llama/llama-3.2-3b-instruct:free', name: 'Llama 3.2 3B', provider: 'Free' },
-  { id: 'google/gemma-2-9b-it:free', name: 'Gemma 2 9B', provider: 'Free' },
+  { id: 'mistralai/devstral-small:free', name: 'Devstral Small', provider: 'Free', description: '24B params, optimized for coding' },
+  { id: 'google/gemma-3n-4b:free', name: 'Gemma 3n 4B', provider: 'Free', description: 'Multimodal, mobile-optimized' },
+  { id: 'meta-llama/llama-3.3-8b-instruct:free', name: 'Llama 3.3 8B', provider: 'Free', description: 'Ultra-fast, lightweight' },
+  { id: 'nousresearch/deephermes-3-mistral-24b:free', name: 'DeepHermes 3 Mistral 24B', provider: 'Free', description: 'Deep reasoning mode' },
+  { id: 'microsoft/phi-4-reasoning-plus:free', name: 'Phi 4 Reasoning Plus', provider: 'Free', description: 'Enhanced math & code reasoning' },
+  { id: 'microsoft/phi-4-reasoning:free', name: 'Phi 4 Reasoning', provider: 'Free', description: 'Step-by-step logic' },
+  { id: 'opengvlab/internvl3-14b:free', name: 'InternVL3 14B', provider: 'Free', description: 'Multimodal, GUI agents' },
+  { id: 'opengvlab/internvl3-2b:free', name: 'InternVL3 2B', provider: 'Free', description: 'Fast inference, multimodal' },
 ];
 
 export const AIChat = () => {
@@ -33,7 +37,7 @@ export const AIChat = () => {
     }
   ]);
   const [input, setInput] = useState('');
-  const [selectedModel, setSelectedModel] = useState('mistralai/mistral-7b-instruct:free');
+  const [selectedModel, setSelectedModel] = useState('mistralai/devstral-small:free');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -142,17 +146,20 @@ export const AIChat = () => {
         <CardContent>
           <div className="flex items-center gap-4 flex-wrap">
             <Select value={selectedModel} onValueChange={setSelectedModel}>
-              <SelectTrigger className="w-64 bg-white/5 border-white/20">
+              <SelectTrigger className="w-80 bg-white/5 border-white/20">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {AI_MODELS.map((model) => (
                   <SelectItem key={model.id} value={model.id}>
-                    <div className="flex items-center gap-2">
-                      <span>{model.name}</span>
-                      <Badge variant="secondary" className="text-xs bg-green-500/20 text-green-400">
-                        {model.provider}
-                      </Badge>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{model.name}</span>
+                        <Badge variant="secondary" className="text-xs bg-green-500/20 text-green-400">
+                          {model.provider}
+                        </Badge>
+                      </div>
+                      <span className="text-xs text-gray-500">{model.description}</span>
                     </div>
                   </SelectItem>
                 ))}
@@ -167,9 +174,9 @@ export const AIChat = () => {
             <div className="flex items-start gap-2">
               <AlertCircle className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
               <div className="text-sm text-blue-300">
-                <p className="font-medium">Using Free AI Models</p>
+                <p className="font-medium">Premium Free AI Models</p>
                 <p className="text-xs opacity-80 mt-1">
-                  These models are completely free but have daily usage limits. If you encounter issues, try switching models or wait a few minutes.
+                  These are high-quality models with specialized capabilities like coding, reasoning, and multimodal inputs - all completely free!
                 </p>
               </div>
             </div>
