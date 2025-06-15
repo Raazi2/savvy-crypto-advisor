@@ -26,55 +26,7 @@ const Auth = () => {
     fullName: ''
   });
 
-  // Redirect if already logged in
-  if (user && !loading) {
-    return <Navigate to="/" replace />;
-  }
-
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    const { error } = await signIn(loginData.email, loginData.password);
-    
-    if (error) {
-      toast({
-        title: "Login Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Welcome back!",
-        description: "You have successfully logged in.",
-      });
-    }
-    
-    setIsLoading(false);
-  };
-
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    const { error } = await signUp(signupData.email, signupData.password, signupData.fullName);
-    
-    if (error) {
-      toast({
-        title: "Signup Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    } else {
-      toast({
-        title: "Account Created!",
-        description: "Please check your email to verify your account.",
-      });
-    }
-    
-    setIsLoading(false);
-  };
-
+  // Show loading spinner while auth state is being determined
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center">
@@ -85,6 +37,79 @@ const Auth = () => {
       </div>
     );
   }
+
+  // Only redirect if user is definitely authenticated and loading is complete
+  if (user && !loading) {
+    return <Navigate to="/" replace />;
+  }
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isLoading) return;
+    
+    setIsLoading(true);
+
+    try {
+      const { error } = await signIn(loginData.email, loginData.password);
+      
+      if (error) {
+        console.error('Login error:', error);
+        toast({
+          title: "Login Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Welcome back!",
+          description: "You have successfully logged in.",
+        });
+      }
+    } catch (err) {
+      console.error('Unexpected login error:', err);
+      toast({
+        title: "Login Failed",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignup = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isLoading) return;
+    
+    setIsLoading(true);
+
+    try {
+      const { error } = await signUp(signupData.email, signupData.password, signupData.fullName);
+      
+      if (error) {
+        console.error('Signup error:', error);
+        toast({
+          title: "Signup Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Account Created!",
+          description: "Please check your email to verify your account.",
+        });
+      }
+    } catch (err) {
+      console.error('Unexpected signup error:', err);
+      toast({
+        title: "Signup Failed",
+        description: "An unexpected error occurred. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center p-6">
@@ -127,6 +152,7 @@ const Auth = () => {
                         onChange={(e) => setLoginData(prev => ({ ...prev, email: e.target.value }))}
                         className="pl-10"
                         required
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -143,6 +169,7 @@ const Auth = () => {
                         onChange={(e) => setLoginData(prev => ({ ...prev, password: e.target.value }))}
                         className="pl-10"
                         required
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -171,6 +198,7 @@ const Auth = () => {
                         onChange={(e) => setSignupData(prev => ({ ...prev, fullName: e.target.value }))}
                         className="pl-10"
                         required
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -187,6 +215,7 @@ const Auth = () => {
                         onChange={(e) => setSignupData(prev => ({ ...prev, email: e.target.value }))}
                         className="pl-10"
                         required
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
@@ -204,6 +233,7 @@ const Auth = () => {
                         className="pl-10"
                         required
                         minLength={6}
+                        disabled={isLoading}
                       />
                     </div>
                   </div>
