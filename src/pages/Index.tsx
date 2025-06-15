@@ -1,10 +1,12 @@
+
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
-import { AlertCircle, CheckCircle, Loader2, ExternalLink, Shield, TrendingUp, Activity } from 'lucide-react';
+import { AlertCircle, CheckCircle, Loader2, ExternalLink, Shield, TrendingUp, Activity, Banknote } from 'lucide-react';
 import { BrokerConnection } from "@/components/BrokerConnection";
 import { Trading } from "@/components/Trading";
 import { Settings } from "@/components/Settings";
 import { LiveMarketDashboard } from "@/components/LiveMarketDashboard";
+import { BankingIntegration } from "@/components/BankingIntegration";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState('broker');
@@ -15,6 +17,8 @@ const Index = () => {
         return <BrokerConnection />;
       case 'trading':
         return <Trading />;
+      case 'banking':
+        return <BankingIntegration />;
       case 'settings':
         return <Settings />;
       case 'live-market':
@@ -45,6 +49,14 @@ const Index = () => {
                 >
                   <TrendingUp className="mr-2 h-4 w-4" />
                   Trading
+                </Button>
+                <Button
+                  variant={activeTab === 'banking' ? 'default' : 'ghost'}
+                  className="w-full justify-start"
+                  onClick={() => setActiveTab('banking')}
+                >
+                  <Banknote className="mr-2 h-4 w-4" />
+                  Banking & Payments
                 </Button>
                 <Button
                   variant={activeTab === 'live-market' ? 'default' : 'ghost'}
