@@ -32,7 +32,6 @@ import { InvestmentIdeas } from "@/components/InvestmentIdeas";
 import LoanCalculator from "@/components/LoanCalculator";
 import PaperTrading from "@/components/PaperTrading";
 import { MutualFundDashboard } from "@/components/MutualFundDashboard";
-import { BrokerConnection } from "@/components/BrokerConnection";
 
 const Index = () => {
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -143,10 +142,6 @@ const Index = () => {
                 <TabsTrigger value="home" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
                   <Home className="w-4 h-4 mr-1" />
                   <span className="hidden sm:inline">Dashboard</span>
-                </TabsTrigger>
-                <TabsTrigger value="broker" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
-                  <Shield className="w-4 h-4 mr-1" />
-                  <span className="hidden sm:inline">Broker</span>
                 </TabsTrigger>
                 <TabsTrigger value="chat" className="inline-flex items-center justify-center whitespace-nowrap rounded-xl px-3 py-2 text-xs font-medium transition-all">
                   <MessageSquare className="w-4 h-4 mr-1" />
@@ -323,10 +318,6 @@ const Index = () => {
             <DashboardHome />
           </TabsContent>
 
-          <TabsContent value="broker" className="space-y-6 mt-6">
-            <BrokerConnection />
-          </TabsContent>
-
           <TabsContent value="global-markets" className="space-y-6 mt-6">
             <StockMarketTabs />
           </TabsContent>
@@ -397,10 +388,6 @@ const Index = () => {
 
           <TabsContent value="settings" className="space-y-6 mt-6">
             <SettingsPanel />
-          </TabsContent>
-
-          <TabsContent value="mutual-funds" className="space-y-6 mt-6">
-            <MutualFundDashboard />
           </TabsContent>
         </Tabs>
       </div>
