@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,9 +9,19 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { TrendingUp, TrendingDown, IndianRupee, Calculator, Target, PiggyBank, RefreshCw } from 'lucide-react';
 import { indianMarketService } from '@/services/indianMarketService';
 
+type MarketStatus = 'OPEN' | 'CLOSED' | 'PRE_OPEN';
+
+interface MarketStatusInfo {
+  status: MarketStatus;
+  nextSession: string;
+}
+
 export const IndianMarketDashboard = () => {
   const [stocks, setStocks] = useState([]);
-  const [marketStatus, setMarketStatus] = useState({ status: 'CLOSED' as const, nextSession: '' });
+  const [marketStatus, setMarketStatus] = useState<MarketStatusInfo>({ 
+    status: 'CLOSED' as MarketStatus, 
+    nextSession: '' 
+  });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   
