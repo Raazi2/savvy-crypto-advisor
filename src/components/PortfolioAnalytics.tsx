@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
-import { TrendingUp, Brain, Calculator, Target, RefreshCw } from 'lucide-react';
+import { TrendingUp, Brain, Calculator, Target, RefreshCw, Plus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -22,6 +22,7 @@ export const PortfolioAnalytics = () => {
   const { toast } = useToast();
   const [portfolioData, setPortfolioData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [addingSampleData, setAddingSampleData] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -50,6 +51,34 @@ export const PortfolioAnalytics = () => {
     }
   };
 
+  const addSampleData = async () => {
+    try {
+      setAddingSampleData(true);
+      const { data, error } = await supabase.functions.invoke('add-sample-data', {
+        body: { userId: user?.id }
+      });
+
+      if (error) throw error;
+      
+      toast({
+        title: "Success",
+        description: "Sample portfolio data added successfully!",
+      });
+      
+      // Refresh the analytics
+      await fetchPortfolioAnalytics();
+    } catch (error) {
+      console.error('Error adding sample data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add sample data",
+        variant: "destructive"
+      });
+    } finally {
+      setAddingSampleData(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -68,21 +97,6 @@ export const PortfolioAnalytics = () => {
     );
   }
 
-  if (!portfolioData) {
-    return (
-      <div className="space-y-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Portfolio Analytics</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p>No portfolio data available.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -93,139 +107,172 @@ export const PortfolioAnalytics = () => {
             Advanced analytics powered by AI and real-time data processing
           </p>
         </div>
-        <Button onClick={fetchPortfolioAnalytics} disabled={loading} variant="outline">
-          <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-          Refresh Data
-        </Button>
+        <div className="flex gap-2">
+          {(!portfolioData || portfolioData.holdings?.length === 0) && (
+            <Button 
+              onClick={addSampleData} 
+              disabled={addingSampleData}
+              variant="outline"
+            >
+              <Plus className={`w-4 h-4 mr-2 ${addingSampleData ? 'animate-spin' : ''}`} />
+              Add Sample Data
+            </Button>
+          )}
+          <Button onClick={fetchPortfolioAnalytics} disabled={loading} variant="outline">
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh Data
+          </Button>
+        </div>
       </div>
 
-      <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="ai-insights">AI Insights</TabsTrigger>
-          <TabsTrigger value="calculations">Calculators</TabsTrigger>
-          <TabsTrigger value="risk-analysis">Risk Analysis</TabsTrigger>
-        </TabsList>
+      {(!portfolioData || portfolioData.holdings?.length === 0) ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>No Portfolio Data</CardTitle>
+            <CardDescription>
+              Get started by adding some sample portfolio data to see AI analytics in action
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600 mb-4">
+              Add sample portfolio data including Indian stocks (Reliance, TCS, Infosys) and crypto (Bitcoin, Ethereum) 
+              to experience the full power of AI-driven portfolio analysis.
+            </p>
+            <Button onClick={addSampleData} disabled={addingSampleData}>
+              <Plus className={`w-4 h-4 mr-2 ${addingSampleData ? 'animate-spin' : ''}`} />
+              Add Sample Portfolio Data
+            </Button>
+          </CardContent>
+        </Card>
+      ) : (
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="grid w-full grid-cols-4">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="ai-insights">AI Insights</TabsTrigger>
+            <TabsTrigger value="calculations">Calculators</TabsTrigger>
+            <TabsTrigger value="risk-analysis">Risk Analysis</TabsTrigger>
+          </TabsList>
 
-        <TabsContent value="overview">
-          <Card>
-            <CardHeader>
-              <CardTitle>Portfolio Overview</CardTitle>
-              <CardDescription>
-                Summary of your portfolio's performance and holdings
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="text-center">
-                      <p className="text-sm text-gray-600">Total Value</p>
-                      <p className="text-2xl font-bold">₹{portfolioData.totalValue.toLocaleString()}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="text-center">
-                      <p className="text-sm text-gray-600">Total Gain/Loss</p>
-                      <p className={`text-2xl font-bold ${portfolioData.totalGainLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                        ₹{portfolioData.totalGainLoss.toLocaleString()}
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-4">
-                    <div className="text-center">
-                      <p className="text-sm text-gray-600">Asset Allocation</p>
-                      <ResponsiveContainer width="100%" height={150}>
-                        <PieChart>
-                          <Pie
-                            data={portfolioData.assetAllocation}
-                            dataKey="percentage"
-                            nameKey="type"
-                            cx="50%"
-                            cy="50%"
-                            outerRadius={50}
-                            fill="#8884d8"
-                            label
-                          >
-                            {portfolioData.assetAllocation.map((entry: any, index: number) => (
-                              <Cell key={`cell-${index}`} fill={`#${Math.floor(Math.random() * 16777215).toString(16)}`} />
-                            ))}
-                          </Pie>
-                          <Tooltip />
-                        </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="ai-insights">
-          <AIPortfolioInsights />
-        </TabsContent>
-
-        <TabsContent value="calculations">
-          <FinancialCalculator />
-        </TabsContent>
-
-        <TabsContent value="risk-analysis">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Target className="w-5 h-5 mr-2" />
-                Advanced Risk Analysis
-              </CardTitle>
-              <CardDescription>
-                AI-powered risk metrics and portfolio optimization
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {portfolioData?.riskMetrics && (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <TabsContent value="overview">
+            <Card>
+              <CardHeader>
+                <CardTitle>Portfolio Overview</CardTitle>
+                <CardDescription>
+                  Summary of your portfolio's performance and holdings
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <Card>
                     <CardContent className="p-4">
                       <div className="text-center">
-                        <p className="text-sm text-gray-600">Volatility</p>
-                        <p className="text-2xl font-bold">{portfolioData.riskMetrics.volatility.toFixed(2)}%</p>
+                        <p className="text-sm text-gray-600">Total Value</p>
+                        <p className="text-2xl font-bold">₹{portfolioData.totalValue.toLocaleString()}</p>
                       </div>
                     </CardContent>
                   </Card>
                   <Card>
                     <CardContent className="p-4">
                       <div className="text-center">
-                        <p className="text-sm text-gray-600">Sharpe Ratio</p>
-                        <p className="text-2xl font-bold">{portfolioData.riskMetrics.sharpeRatio.toFixed(2)}</p>
+                        <p className="text-sm text-gray-600">Total Gain/Loss</p>
+                        <p className={`text-2xl font-bold ${portfolioData.totalGainLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          ₹{portfolioData.totalGainLoss.toLocaleString()}
+                        </p>
                       </div>
                     </CardContent>
                   </Card>
                   <Card>
                     <CardContent className="p-4">
                       <div className="text-center">
-                        <p className="text-sm text-gray-600">Beta</p>
-                        <p className="text-2xl font-bold">{portfolioData.riskMetrics.beta.toFixed(2)}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="text-center">
-                        <p className="text-sm text-gray-600">Max Drawdown</p>
-                        <p className="text-2xl font-bold text-red-600">{portfolioData.riskMetrics.maxDrawdown.toFixed(2)}%</p>
+                        <p className="text-sm text-gray-600">Asset Allocation</p>
+                        <ResponsiveContainer width="100%" height={150}>
+                          <PieChart>
+                            <Pie
+                              data={portfolioData.assetAllocation}
+                              dataKey="percentage"
+                              nameKey="type"
+                              cx="50%"
+                              cy="50%"
+                              outerRadius={50}
+                              fill="#8884d8"
+                              label
+                            >
+                              {portfolioData.assetAllocation.map((entry: any, index: number) => (
+                                <Cell key={`cell-${index}`} fill={`#${Math.floor(Math.random() * 16777215).toString(16)}`} />
+                              ))}
+                            </Pie>
+                            <Tooltip />
+                          </PieChart>
+                        </ResponsiveContainer>
                       </div>
                     </CardContent>
                   </Card>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="ai-insights">
+            <AIPortfolioInsights />
+          </TabsContent>
+
+          <TabsContent value="calculations">
+            <FinancialCalculator />
+          </TabsContent>
+
+          <TabsContent value="risk-analysis">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Target className="w-5 h-5 mr-2" />
+                  Advanced Risk Analysis
+                </CardTitle>
+                <CardDescription>
+                  AI-powered risk metrics and portfolio optimization
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {portfolioData?.riskMetrics && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <p className="text-sm text-gray-600">Volatility</p>
+                          <p className="text-2xl font-bold">{portfolioData.riskMetrics.volatility.toFixed(2)}%</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <p className="text-sm text-gray-600">Sharpe Ratio</p>
+                          <p className="text-2xl font-bold">{portfolioData.riskMetrics.sharpeRatio.toFixed(2)}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <p className="text-sm text-gray-600">Beta</p>
+                          <p className="text-2xl font-bold">{portfolioData.riskMetrics.beta.toFixed(2)}</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="text-center">
+                          <p className="text-sm text-gray-600">Max Drawdown</p>
+                          <p className="text-2xl font-bold text-red-600">{portfolioData.riskMetrics.maxDrawdown.toFixed(2)}%</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 };

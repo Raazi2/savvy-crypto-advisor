@@ -18,16 +18,18 @@ serve(async (req) => {
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-    const openaiKey = Deno.env.get('OPENAI_API_KEY');
+    const openrouterKey = Deno.env.get('OPENROUTER_API_KEY');
     
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    if (!openaiKey) {
+    if (!openrouterKey) {
       return new Response(
-        JSON.stringify({ error: 'OpenAI API key not configured' }),
+        JSON.stringify({ error: 'OpenRouter API key not configured' }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log('Fetching portfolio data for AI analysis, user:', userId);
 
     // Get user's portfolio data
     const { data: holdings } = await supabase
@@ -43,10 +45,15 @@ serve(async (req) => {
     if (!holdings || holdings.length === 0) {
       return new Response(
         JSON.stringify({
-          analysis: 'No holdings found for analysis',
-          recommendations: [],
+          analysis: 'No holdings found for analysis. Consider adding some stocks or crypto to your portfolio to get AI-powered insights.',
+          recommendations: ['Add diversified holdings to your portfolio', 'Consider both stocks and crypto for balanced exposure'],
           riskScore: 0,
-          diversificationScore: 0
+          diversificationScore: 0,
+          predictions: {
+            shortTerm: 'Unable to predict without portfolio data',
+            longTerm: 'Start building your portfolio for long-term wealth creation'
+          },
+          rebalanceAdvice: ['Begin by adding your first investment']
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -66,15 +73,19 @@ serve(async (req) => {
       }))
     };
 
-    // AI Analysis using OpenAI
-    const aiResponse = await fetch('https://api.openai.com/v1/chat/completions', {
+    console.log('Sending request to OpenRouter for AI analysis');
+
+    // AI Analysis using OpenRouter
+    const aiResponse = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openaiKey}`,
+        'Authorization': `Bearer ${openrouterKey}`,
         'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://fintech-advisor.lovable.app',
+        'X-Title': 'Fintech Advisor AI'
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'anthropic/claude-3.5-sonnet',
         messages: [
           {
             role: 'system',
@@ -89,7 +100,9 @@ serve(async (req) => {
                 "longTerm": "1+ year outlook"
               },
               "rebalanceAdvice": ["advice1", "advice2", ...]
-            }`
+            }
+
+            Focus on practical, actionable advice for Indian markets and global investments.`
           },
           {
             role: 'user',
@@ -99,6 +112,11 @@ serve(async (req) => {
         temperature: 0.3
       }),
     });
+
+    if (!aiResponse.ok) {
+      console.error('OpenRouter API error:', await aiResponse.text());
+      throw new Error('Failed to get AI analysis');
+    }
 
     const aiData = await aiResponse.json();
     let analysis;
@@ -143,7 +161,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in AI portfolio analysis:', error);
     return new Response(
-      JSON.stringify({ error: 'Failed to analyze portfolio' }),
+      JSON.stringify({ error: 'Failed to analyze portfolio', details: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
