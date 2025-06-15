@@ -17,9 +17,10 @@ interface Message {
 }
 
 const AI_MODELS = [
-  { id: 'nousresearch/nous-capybara-7b:free', name: 'Nous Capybara 7B', provider: 'Free' },
-  { id: 'mistralai/mistral-7b-instruct:free', name: 'Mistral 7B', provider: 'Free' },
+  { id: 'mistralai/mistral-7b-instruct:free', name: 'Mistral 7B Instruct', provider: 'Free' },
   { id: 'microsoft/wizardlm-2-8x22b', name: 'WizardLM-2 8x22B', provider: 'Free' },
+  { id: 'meta-llama/llama-3.2-3b-instruct:free', name: 'Llama 3.2 3B', provider: 'Free' },
+  { id: 'google/gemma-2-9b-it:free', name: 'Gemma 2 9B', provider: 'Free' },
 ];
 
 export const AIChat = () => {
@@ -32,7 +33,7 @@ export const AIChat = () => {
     }
   ]);
   const [input, setInput] = useState('');
-  const [selectedModel, setSelectedModel] = useState('nousresearch/nous-capybara-7b:free');
+  const [selectedModel, setSelectedModel] = useState('mistralai/mistral-7b-instruct:free');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -66,22 +67,27 @@ export const AIChat = () => {
         throw new Error(error.message || 'Failed to get AI response');
       }
 
-      if (data.error) {
+      if (data?.error) {
         console.error('AI function returned error:', data.error);
         
         // Handle specific errors
-        if (data.error.includes('credits exhausted')) {
+        if (data.error.includes('credits exhausted') || data.error.includes('402')) {
           toast({
             title: "OpenRouter Credits Exhausted",
             description: "Please add credits at OpenRouter or try again later.",
             variant: "destructive",
           });
-        } else if (data.error.includes('model is not available')) {
+        } else if (data.error.includes('model') && data.error.includes('not')) {
           toast({
             title: "Model Unavailable", 
-            description: "This AI model is not available. Try selecting a different model.",
+            description: "This AI model is not available. Trying a different model...",
             variant: "destructive",
           });
+          // Auto-switch to a different model
+          const availableModels = AI_MODELS.filter(m => m.id !== selectedModel);
+          if (availableModels.length > 0) {
+            setSelectedModel(availableModels[0].id);
+          }
         } else {
           toast({
             title: "AI Error",
@@ -92,14 +98,18 @@ export const AIChat = () => {
         return;
       }
       
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        role: 'assistant',
-        content: data.response,
-        timestamp: new Date(),
-      };
+      if (data?.response) {
+        const aiResponse: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: data.response,
+          timestamp: new Date(),
+        };
 
-      setMessages(prev => [...prev, aiResponse]);
+        setMessages(prev => [...prev, aiResponse]);
+      } else {
+        throw new Error('No response received from AI');
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       toast({
