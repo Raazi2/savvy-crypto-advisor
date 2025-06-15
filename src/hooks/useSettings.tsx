@@ -1,4 +1,3 @@
-
 import { useState, useEffect, createContext, useContext } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -85,6 +84,8 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
 
   useEffect(() => {
     if (user) {
+      // Reset to defaults when user changes to not leak settings
+      setSettings(defaultSettings);
       loadSettings();
     }
   }, [user]);
@@ -96,20 +97,28 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
       // Load from localStorage
       const storedSettings = localStorage.getItem(`settings_${user.id}`);
       if (storedSettings) {
-        const parsed = JSON.parse(storedSettings);
-        setSettings(prev => ({ ...prev, ...parsed }));
+        try {
+          const parsed = JSON.parse(storedSettings);
+          updateSettings(parsed);
+        } catch (e) {
+          console.error("Error parsing settings from localStorage", e);
+        }
       }
 
       // Load from Supabase user metadata
       if (user.user_metadata?.settings) {
-        setSettings(prev => ({ ...prev, ...user.user_metadata.settings }));
+        updateSettings(user.user_metadata.settings as Partial<SettingsData>);
       }
 
       // Load API keys separately
       const storedApiKeys = localStorage.getItem(`api_keys_${user.id}`);
       if (storedApiKeys) {
-        const parsed = JSON.parse(storedApiKeys);
-        setSettings(prev => ({ ...prev, apiKeys: parsed }));
+        try {
+          const parsed = JSON.parse(storedApiKeys);
+          updateSettings({ apiKeys: parsed });
+        } catch (e) {
+          console.error("Error parsing API keys from localStorage", e);
+        }
       }
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -119,12 +128,22 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
   const updateSettings = (newSettings: Partial<SettingsData>) => {
     setSettings(prev => {
       const updated = { ...prev };
-      Object.keys(newSettings).forEach(key => {
-        if (newSettings[key as keyof SettingsData]) {
-          updated[key as keyof SettingsData] = {
-            ...updated[key as keyof SettingsData],
-            ...newSettings[key as keyof SettingsData]
-          } as any;
+      (Object.keys(newSettings) as Array<keyof SettingsData>).forEach(key => {
+        const newValue = newSettings[key];
+        const prevValue = prev[key];
+
+        // If both new and old values are objects, merge them.
+        if (
+          newValue && typeof newValue === 'object' && !Array.isArray(newValue) &&
+          prevValue && typeof prevValue === 'object' && !Array.isArray(prevValue)
+        ) {
+          updated[key] = {
+            ...prevValue,
+            ...newValue,
+          };
+        } else {
+          // Otherwise, just replace the value. This handles primitives and setting an object where there was none.
+          updated[key] = newValue as any;
         }
       });
       return updated;
