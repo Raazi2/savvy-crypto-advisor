@@ -1,3 +1,4 @@
+
 import { useState, useEffect, createContext, useContext } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -128,24 +129,20 @@ export const SettingsProvider = ({ children }: { children: React.ReactNode }) =>
   const updateSettings = (newSettings: Partial<SettingsData>) => {
     setSettings(prev => {
       const updated = { ...prev };
-      (Object.keys(newSettings) as Array<keyof SettingsData>).forEach(key => {
-        const newValue = newSettings[key];
-        const prevValue = prev[key];
+      
+      if (newSettings.apiKeys) {
+        updated.apiKeys = { ...prev.apiKeys, ...newSettings.apiKeys };
+      }
+      if (newSettings.notifications) {
+        updated.notifications = { ...prev.notifications, ...newSettings.notifications };
+      }
+      if (newSettings.preferences) {
+        updated.preferences = { ...prev.preferences, ...newSettings.preferences };
+      }
+      if (newSettings.privacy) {
+        updated.privacy = { ...prev.privacy, ...newSettings.privacy };
+      }
 
-        // If both new and old values are objects, merge them.
-        if (
-          newValue && typeof newValue === 'object' && !Array.isArray(newValue) &&
-          prevValue && typeof prevValue === 'object' && !Array.isArray(prevValue)
-        ) {
-          updated[key] = {
-            ...prevValue,
-            ...newValue,
-          };
-        } else {
-          // Otherwise, just replace the value. This handles primitives and setting an object where there was none.
-          updated[key] = newValue as any;
-        }
-      });
       return updated;
     });
   };
