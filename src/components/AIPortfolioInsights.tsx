@@ -111,15 +111,14 @@ export const AIPortfolioInsights = () => {
     );
   }
 
-  // Safe access to analysis data with fallbacks
   const safeAnalysis = {
-    analysis: analysis?.analysis || '',
+    analysis: analysis?.analysis || 'No analysis available',
     riskScore: analysis?.riskScore ?? 0,
     diversificationScore: analysis?.diversificationScore ?? 0,
     recommendations: Array.isArray(analysis?.recommendations) ? analysis.recommendations : [],
     predictions: {
-      shortTerm: analysis?.predictions?.shortTerm || '',
-      longTerm: analysis?.predictions?.longTerm || ''
+      shortTerm: analysis?.predictions?.shortTerm || 'No short-term prediction available',
+      longTerm: analysis?.predictions?.longTerm || 'No long-term prediction available'
     },
     rebalanceAdvice: Array.isArray(analysis?.rebalanceAdvice) ? analysis.rebalanceAdvice : [],
     metrics: {
@@ -131,7 +130,6 @@ export const AIPortfolioInsights = () => {
 
   return (
     <div className="space-y-6">
-      {/* AI Analysis Overview */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
@@ -155,7 +153,6 @@ export const AIPortfolioInsights = () => {
         </CardContent>
       </Card>
 
-      {/* Risk & Diversification Scores */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
@@ -227,7 +224,6 @@ export const AIPortfolioInsights = () => {
         </Card>
       </div>
 
-      {/* Predictions */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center">
@@ -249,27 +245,27 @@ export const AIPortfolioInsights = () => {
         </CardContent>
       </Card>
 
-      {/* Recommendations */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Lightbulb className="w-5 h-5 mr-2" />
-            AI Recommendations
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {safeAnalysis.recommendations.map((recommendation, index) => (
-              <div key={index} className="flex items-start space-x-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                <p className="text-sm">{recommendation}</p>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      {safeAnalysis.recommendations.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Lightbulb className="w-5 h-5 mr-2" />
+              AI Recommendations
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {safeAnalysis.recommendations.map((recommendation, index) => (
+                <div key={index} className="flex items-start space-x-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                  <p className="text-sm">{recommendation}</p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-      {/* Rebalancing Advice */}
       {safeAnalysis.rebalanceAdvice.length > 0 && (
         <Card>
           <CardHeader>

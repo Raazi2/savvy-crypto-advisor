@@ -11,17 +11,26 @@ import { useToast } from '@/hooks/use-toast';
 import { AIPortfolioInsights } from './AIPortfolioInsights';
 import { FinancialCalculator } from './FinancialCalculator';
 
-interface PortfolioSummary {
+interface PortfolioData {
   totalValue: number;
-  dayChange: number;
-  dayChangePercent: number;
-  holdings: number;
+  totalGainLoss: number;
+  totalGainLossPercent: number;
+  holdings: any[];
+  assetAllocation: any[];
+  riskMetrics: {
+    volatility: number;
+    sharpeRatio: number;
+    beta: number;
+    maxDrawdown: number;
+  };
+  performanceHistory: any[];
+  holdingsCount: number;
 }
 
 export const PortfolioAnalytics = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [portfolioData, setPortfolioData] = useState<any>(null);
+  const [portfolioData, setPortfolioData] = useState<PortfolioData | null>(null);
   const [loading, setLoading] = useState(true);
   const [addingSampleData, setAddingSampleData] = useState(false);
 
@@ -29,7 +38,6 @@ export const PortfolioAnalytics = () => {
     if (user) {
       fetchPortfolioAnalytics();
     } else {
-      // Reset state when user is not authenticated
       setPortfolioData(null);
       setLoading(false);
     }
@@ -57,7 +65,6 @@ export const PortfolioAnalytics = () => {
         throw error;
       }
       
-      // Ensure we have a valid data structure with safe fallbacks
       const validatedData = {
         totalValue: data?.totalValue ?? 0,
         totalGainLoss: data?.totalGainLoss ?? 0,
@@ -83,7 +90,6 @@ export const PortfolioAnalytics = () => {
         variant: "destructive"
       });
       
-      // Set safe default data structure to prevent undefined errors
       setPortfolioData({
         totalValue: 0,
         totalGainLoss: 0,
@@ -134,7 +140,6 @@ export const PortfolioAnalytics = () => {
         description: `Sample portfolio data added successfully! Added ${data?.holdingsCount || 0} holdings.`,
       });
       
-      // Refresh the analytics after adding sample data
       await fetchPortfolioAnalytics();
     } catch (error) {
       console.error('Error adding sample data:', error);
@@ -148,7 +153,6 @@ export const PortfolioAnalytics = () => {
     }
   };
 
-  // Early return if no user
   if (!user) {
     return (
       <div className="space-y-6">
@@ -183,7 +187,6 @@ export const PortfolioAnalytics = () => {
     );
   }
 
-  // Safe access to portfolio data with multiple fallback layers
   const safePortfolioData = portfolioData ?? {
     totalValue: 0,
     totalGainLoss: 0,
@@ -200,7 +203,6 @@ export const PortfolioAnalytics = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Portfolio Analytics</h1>
@@ -254,67 +256,94 @@ export const PortfolioAnalytics = () => {
             <TabsTrigger value="risk-analysis">Risk Analysis</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="overview">
-            <Card>
-              <CardHeader>
-                <CardTitle>Portfolio Overview</CardTitle>
-                <CardDescription>
-                  Summary of your portfolio's performance and holdings ({holdingsCount} holdings)
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="text-center">
-                        <p className="text-sm text-gray-600">Total Value</p>
-                        <p className="text-2xl font-bold">₹{(safePortfolioData.totalValue || 0).toLocaleString()}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="text-center">
-                        <p className="text-sm text-gray-600">Total Gain/Loss</p>
-                        <p className={`text-2xl font-bold ${(safePortfolioData.totalGainLoss || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          ₹{(safePortfolioData.totalGainLoss || 0).toLocaleString()}
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardContent className="p-4">
-                      <div className="text-center">
-                        <p className="text-sm text-gray-600">Asset Allocation</p>
-                        {Array.isArray(safePortfolioData.assetAllocation) && safePortfolioData.assetAllocation.length > 0 ? (
-                          <ResponsiveContainer width="100%" height={150}>
-                            <PieChart>
-                              <Pie
-                                data={safePortfolioData.assetAllocation}
-                                dataKey="percentage"
-                                nameKey="type"
-                                cx="50%"
-                                cy="50%"
-                                outerRadius={50}
-                                fill="#8884d8"
-                                label
-                              >
-                                {safePortfolioData.assetAllocation.map((entry: any, index: number) => (
-                                  <Cell key={`cell-${index}`} fill={`#${Math.floor(Math.random() * 16777215).toString(16)}`} />
-                                ))}
-                              </Pie>
-                              <Tooltip />
-                            </PieChart>
-                          </ResponsiveContainer>
-                        ) : (
-                          <p className="text-sm text-gray-500 mt-4">No allocation data</p>
-                        )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-              </CardContent>
-            </Card>
+          <TabsContent value="overview" className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <Card>
+                <CardContent className="p-6">
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Total Value</p>
+                    <p className="text-3xl font-bold">₹{(safePortfolioData.totalValue || 0).toLocaleString()}</p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Total Gain/Loss</p>
+                    <p className={`text-3xl font-bold ${(safePortfolioData.totalGainLoss || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {(safePortfolioData.totalGainLoss || 0) >= 0 ? '+' : ''}₹{(safePortfolioData.totalGainLoss || 0).toLocaleString()}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-6">
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600 dark:text-gray-400">Performance</p>
+                    <p className={`text-3xl font-bold flex items-center justify-center ${(safePortfolioData.totalGainLossPercent || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {(safePortfolioData.totalGainLossPercent || 0) >= 0 ? <TrendingUp className="w-6 h-6 mr-2" /> : <TrendingUp className="w-6 h-6 mr-2 rotate-180" />}
+                      {(safePortfolioData.totalGainLossPercent || 0).toFixed(2)}%
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {safePortfolioData.performanceHistory.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Performance History</CardTitle>
+                  <CardDescription>Portfolio value over time</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={safePortfolioData.performanceHistory}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="date" />
+                      <YAxis />
+                      <Tooltip />
+                      <Line 
+                        type="monotone" 
+                        dataKey="value" 
+                        stroke="#3b82f6" 
+                        strokeWidth={2}
+                        name="Portfolio Value"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
+
+            {Array.isArray(safePortfolioData.assetAllocation) && safePortfolioData.assetAllocation.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Asset Allocation</CardTitle>
+                  <CardDescription>Portfolio distribution by asset type</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <PieChart>
+                      <Pie
+                        data={safePortfolioData.assetAllocation}
+                        dataKey="percentage"
+                        nameKey="type"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={100}
+                        fill="#8884d8"
+                        label={({ type, percentage }) => `${type}: ${percentage.toFixed(1)}%`}
+                      >
+                        {safePortfolioData.assetAllocation.map((entry: any, index: number) => (
+                          <Cell key={`cell-${index}`} fill={index === 0 ? '#3b82f6' : '#10b981'} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="ai-insights">
@@ -330,49 +359,51 @@ export const PortfolioAnalytics = () => {
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Target className="w-5 h-5 mr-2" />
-                  Advanced Risk Analysis
+                  Risk Analysis
                 </CardTitle>
                 <CardDescription>
-                  AI-powered risk metrics and portfolio optimization
+                  Portfolio risk metrics and analysis
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {safePortfolioData.riskMetrics && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="text-center">
-                          <p className="text-sm text-gray-600">Volatility</p>
-                          <p className="text-2xl font-bold">{(safePortfolioData.riskMetrics.volatility || 0).toFixed(2)}%</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="text-center">
-                          <p className="text-sm text-gray-600">Sharpe Ratio</p>
-                          <p className="text-2xl font-bold">{(safePortfolioData.riskMetrics.sharpeRatio || 0).toFixed(2)}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="text-center">
-                          <p className="text-sm text-gray-600">Beta</p>
-                          <p className="text-2xl font-bold">{(safePortfolioData.riskMetrics.beta || 0).toFixed(2)}</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="text-center">
-                          <p className="text-sm text-gray-600">Max Drawdown</p>
-                          <p className="text-2xl font-bold text-red-600">{(safePortfolioData.riskMetrics.maxDrawdown || 0).toFixed(2)}%</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </div>
-                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-center">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Volatility</p>
+                        <p className="text-2xl font-bold">{(safePortfolioData.riskMetrics.volatility || 0).toFixed(2)}%</p>
+                        <p className="text-xs text-gray-500">Price volatility</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-center">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Sharpe Ratio</p>
+                        <p className="text-2xl font-bold">{(safePortfolioData.riskMetrics.sharpeRatio || 0).toFixed(2)}</p>
+                        <p className="text-xs text-gray-500">Risk-adjusted return</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-center">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Beta</p>
+                        <p className="text-2xl font-bold">{(safePortfolioData.riskMetrics.beta || 0).toFixed(2)}</p>
+                        <p className="text-xs text-gray-500">Market correlation</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="text-center">
+                        <p className="text-sm text-gray-600 dark:text-gray-400">Max Drawdown</p>
+                        <p className="text-2xl font-bold text-red-600">{(safePortfolioData.riskMetrics.maxDrawdown || 0).toFixed(2)}%</p>
+                        <p className="text-xs text-gray-500">Worst decline</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
