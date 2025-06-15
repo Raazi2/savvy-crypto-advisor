@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -10,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Home, MessageSquare, Wallet, Shield, Settings, Moon, Sun, Menu, X, LogOut, User, BarChart3, Newspaper, GraduationCap, Users, Bell, TrendingUp, PieChart, Filter, Lightbulb, Target, Calculator, PlayCircle, ChevronDown, IndianRupee, Globe } from "lucide-react";
+import { Home, MessageSquare, Wallet, Shield, Settings, Moon, Sun, Menu, X, LogOut, User, BarChart3, Newspaper, GraduationCap, Users, Bell, TrendingUp, PieChart, Filter, Lightbulb, Target, Calculator, PlayCircle, ChevronDown, IndianRupee, Globe, PiggyBank } from "lucide-react";
 import { DashboardHome } from "@/components/DashboardHome";
 import { AIChat } from "@/components/AIChat";
 import { WalletViewer } from "@/components/WalletViewer";
@@ -32,6 +31,7 @@ import { GoalPlanning } from "@/components/GoalPlanning";
 import { InvestmentIdeas } from "@/components/InvestmentIdeas";
 import LoanCalculator from "@/components/LoanCalculator";
 import PaperTrading from "@/components/PaperTrading";
+import { MutualFundDashboard } from "@/components/MutualFundDashboard";
 
 const Index = () => {
   const [isDarkMode, setIsDarkMode] = useState(true);
