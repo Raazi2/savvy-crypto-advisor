@@ -99,8 +99,8 @@ serve(async (req) => {
         }
 
         const currentValue = currentPrice * holding.quantity;
-        const gainLoss = currentValue - (holding.avg_cost * holding.quantity);
-        const gainLossPercent = holding.avg_cost > 0 ? (gainLoss / (holding.avg_cost * holding.quantity)) * 100 : 0;
+        const gainLoss = currentValue - (holding.average_price * holding.quantity);
+        const gainLossPercent = holding.average_price > 0 ? (gainLoss / (holding.average_price * holding.quantity)) * 100 : 0;
 
         return {
           ...holding,
@@ -113,8 +113,8 @@ serve(async (req) => {
         console.error(`Error fetching price for ${holding.symbol}:`, error);
         return {
           ...holding,
-          current_price: holding.avg_cost,
-          current_value: holding.avg_cost * holding.quantity,
+          current_price: holding.average_price,
+          current_value: holding.average_price * holding.quantity,
           gain_loss: 0,
           gain_loss_percent: 0
         };
@@ -125,7 +125,7 @@ serve(async (req) => {
 
     // Calculate portfolio metrics
     const totalValue = updatedHoldings.reduce((sum, holding) => sum + holding.current_value, 0);
-    const totalCost = updatedHoldings.reduce((sum, holding) => sum + (holding.avg_cost * holding.quantity), 0);
+    const totalCost = updatedHoldings.reduce((sum, holding) => sum + (holding.average_price * holding.quantity), 0);
     const totalGainLoss = totalValue - totalCost;
     const totalGainLossPercent = totalCost > 0 ? (totalGainLoss / totalCost) * 100 : 0;
 

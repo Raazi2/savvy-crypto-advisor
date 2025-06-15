@@ -127,6 +127,7 @@ export type Database = {
           quantity: number
           symbol: string
           updated_at: string
+          user_id: string
         }
         Insert: {
           asset_type: string
@@ -139,6 +140,7 @@ export type Database = {
           quantity: number
           symbol: string
           updated_at?: string
+          user_id: string
         }
         Update: {
           asset_type?: string
@@ -151,6 +153,7 @@ export type Database = {
           quantity?: number
           symbol?: string
           updated_at?: string
+          user_id?: string
         }
         Relationships: [
           {
@@ -158,6 +161,13 @@ export type Database = {
             columns: ["portfolio_id"]
             isOneToOne: false
             referencedRelation: "portfolios"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "portfolio_holdings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
