@@ -22,6 +22,10 @@ interface Holding {
   average_price: number;
   current_price: number;
   asset_type: 'stock' | 'crypto';
+  portfolio_id?: string;
+  user_id?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 interface LivePriceData {
@@ -39,6 +43,7 @@ export const LivePortfolioManager = () => {
   const [holdings, setHoldings] = useState<Holding[]>([]);
   const [livePrices, setLivePrices] = useState<LivePriceData>({});
   const [isLoading, setIsLoading] = useState(false);
+  const [defaultPortfolioId, setDefaultPortfolioId] = useState<string | null>(null);
   const [newHolding, setNewHolding] = useState<Partial<Holding>>({
     symbol: '',
     name: '',
@@ -49,7 +54,7 @@ export const LivePortfolioManager = () => {
 
   useEffect(() => {
     if (user) {
-      fetchHoldings();
+      initializeUserPortfolio();
     }
   }, [user]);
 
@@ -61,6 +66,50 @@ export const LivePortfolioManager = () => {
     }
   }, [holdings]);
 
+  const initializeUserPortfolio = async () => {
+    try {
+      // First, get or create default portfolio
+      let { data: portfolios, error: portfolioError } = await supabase
+        .from('portfolios')
+        .select('*')
+        .eq('user_id', user?.id)
+        .limit(1);
+
+      if (portfolioError) throw portfolioError;
+
+      let portfolioId: string;
+
+      if (!portfolios || portfolios.length === 0) {
+        // Create default portfolio
+        const { data: newPortfolio, error: createError } = await supabase
+          .from('portfolios')
+          .insert({
+            user_id: user?.id,
+            name: 'My Portfolio'
+          })
+          .select()
+          .single();
+
+        if (createError) throw createError;
+        portfolioId = newPortfolio.id;
+      } else {
+        portfolioId = portfolios[0].id;
+      }
+
+      setDefaultPortfolioId(portfolioId);
+      
+      // Then fetch holdings
+      await fetchHoldings();
+    } catch (error) {
+      console.error('Error initializing portfolio:', error);
+      toast({
+        title: "Error",
+        description: "Failed to initialize portfolio",
+        variant: "destructive",
+      });
+    }
+  };
+
   const fetchHoldings = async () => {
     try {
       const { data, error } = await supabase
@@ -69,7 +118,14 @@ export const LivePortfolioManager = () => {
         .eq('user_id', user?.id);
 
       if (error) throw error;
-      setHoldings(data || []);
+      
+      // Type assertion to ensure asset_type is properly typed
+      const typedHoldings = data?.map(holding => ({
+        ...holding,
+        asset_type: holding.asset_type as 'stock' | 'crypto'
+      })) || [];
+      
+      setHoldings(typedHoldings);
     } catch (error) {
       console.error('Error fetching holdings:', error);
       toast({
@@ -85,9 +141,6 @@ export const LivePortfolioManager = () => {
 
     try {
       setIsLoading(true);
-      const symbols = holdings.map(h => h.symbol);
-      
-      // Fetch live prices for stocks and crypto
       const priceData: LivePriceData = {};
       
       for (const holding of holdings) {
@@ -125,7 +178,7 @@ export const LivePortfolioManager = () => {
   };
 
   const addHolding = async () => {
-    if (!newHolding.symbol || !newHolding.name || !newHolding.quantity || !newHolding.average_price) {
+    if (!newHolding.symbol || !newHolding.name || !newHolding.quantity || !newHolding.average_price || !defaultPortfolioId) {
       toast({
         title: "Missing Information",
         description: "Please fill in all fields",
@@ -139,6 +192,7 @@ export const LivePortfolioManager = () => {
         .from('portfolio_holdings')
         .insert({
           user_id: user?.id,
+          portfolio_id: defaultPortfolioId,
           symbol: newHolding.symbol.toUpperCase(),
           name: newHolding.name,
           quantity: newHolding.quantity,
@@ -151,7 +205,13 @@ export const LivePortfolioManager = () => {
 
       if (error) throw error;
 
-      setHoldings(prev => [...prev, data]);
+      // Type assertion for the new holding
+      const typedHolding: Holding = {
+        ...data,
+        asset_type: data.asset_type as 'stock' | 'crypto'
+      };
+
+      setHoldings(prev => [...prev, typedHolding]);
       setNewHolding({
         symbol: '',
         name: '',
