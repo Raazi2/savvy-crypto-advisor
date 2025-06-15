@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -33,18 +34,60 @@ export const PortfolioAnalytics = () => {
   const fetchPortfolioAnalytics = async () => {
     try {
       setLoading(true);
+      console.log('Fetching portfolio analytics for user:', user?.id);
+      
       const { data, error } = await supabase.functions.invoke('portfolio-analytics', {
         body: { userId: user?.id }
       });
 
-      if (error) throw error;
-      setPortfolioData(data);
+      console.log('Portfolio analytics response:', { data, error });
+
+      if (error) {
+        console.error('Portfolio analytics error:', error);
+        throw error;
+      }
+      
+      // Ensure we have a valid data structure
+      const validatedData = {
+        totalValue: data?.totalValue || 0,
+        totalGainLoss: data?.totalGainLoss || 0,
+        totalGainLossPercent: data?.totalGainLossPercent || 0,
+        holdings: data?.holdings || [],
+        assetAllocation: data?.assetAllocation || [],
+        riskMetrics: data?.riskMetrics || {
+          volatility: 0,
+          sharpeRatio: 0,
+          beta: 0,
+          maxDrawdown: 0
+        },
+        performanceHistory: data?.performanceHistory || [],
+        holdingsCount: data?.holdings?.length || 0
+      };
+      
+      setPortfolioData(validatedData);
     } catch (error) {
       console.error('Error fetching portfolio analytics:', error);
       toast({
         title: "Error",
-        description: "Failed to fetch portfolio analytics",
+        description: "Failed to fetch portfolio analytics. Using default values.",
         variant: "destructive"
+      });
+      
+      // Set default empty data structure to prevent undefined errors
+      setPortfolioData({
+        totalValue: 0,
+        totalGainLoss: 0,
+        totalGainLossPercent: 0,
+        holdings: [],
+        assetAllocation: [],
+        riskMetrics: {
+          volatility: 0,
+          sharpeRatio: 0,
+          beta: 0,
+          maxDrawdown: 0
+        },
+        performanceHistory: [],
+        holdingsCount: 0
       });
     } finally {
       setLoading(false);
@@ -54,24 +97,31 @@ export const PortfolioAnalytics = () => {
   const addSampleData = async () => {
     try {
       setAddingSampleData(true);
+      console.log('Adding sample data for user:', user?.id);
+      
       const { data, error } = await supabase.functions.invoke('add-sample-data', {
         body: { userId: user?.id }
       });
 
-      if (error) throw error;
+      console.log('Add sample data response:', { data, error });
+
+      if (error) {
+        console.error('Add sample data error:', error);
+        throw error;
+      }
       
       toast({
         title: "Success",
-        description: "Sample portfolio data added successfully!",
+        description: `Sample portfolio data added successfully! Added ${data?.holdingsCount || 0} holdings.`,
       });
       
-      // Refresh the analytics
+      // Refresh the analytics after adding sample data
       await fetchPortfolioAnalytics();
     } catch (error) {
       console.error('Error adding sample data:', error);
       toast({
         title: "Error",
-        description: "Failed to add sample data",
+        description: "Failed to add sample data. Please try again.",
         variant: "destructive"
       });
     } finally {
@@ -97,6 +147,10 @@ export const PortfolioAnalytics = () => {
     );
   }
 
+  // Safe access to portfolio data with fallbacks
+  const hasHoldings = portfolioData?.holdings?.length > 0;
+  const holdingsCount = portfolioData?.holdingsCount || portfolioData?.holdings?.length || 0;
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -108,14 +162,14 @@ export const PortfolioAnalytics = () => {
           </p>
         </div>
         <div className="flex gap-2">
-          {(!portfolioData || portfolioData.holdings?.length === 0) && (
+          {!hasHoldings && (
             <Button 
               onClick={addSampleData} 
               disabled={addingSampleData}
               variant="outline"
             >
               <Plus className={`w-4 h-4 mr-2 ${addingSampleData ? 'animate-spin' : ''}`} />
-              Add Sample Data
+              {addingSampleData ? 'Adding...' : 'Add Sample Data'}
             </Button>
           )}
           <Button onClick={fetchPortfolioAnalytics} disabled={loading} variant="outline">
@@ -125,7 +179,7 @@ export const PortfolioAnalytics = () => {
         </div>
       </div>
 
-      {(!portfolioData || portfolioData.holdings?.length === 0) ? (
+      {!hasHoldings ? (
         <Card>
           <CardHeader>
             <CardTitle>No Portfolio Data</CardTitle>
@@ -140,7 +194,7 @@ export const PortfolioAnalytics = () => {
             </p>
             <Button onClick={addSampleData} disabled={addingSampleData}>
               <Plus className={`w-4 h-4 mr-2 ${addingSampleData ? 'animate-spin' : ''}`} />
-              Add Sample Portfolio Data
+              {addingSampleData ? 'Adding Sample Data...' : 'Add Sample Portfolio Data'}
             </Button>
           </CardContent>
         </Card>
@@ -158,7 +212,7 @@ export const PortfolioAnalytics = () => {
               <CardHeader>
                 <CardTitle>Portfolio Overview</CardTitle>
                 <CardDescription>
-                  Summary of your portfolio's performance and holdings
+                  Summary of your portfolio's performance and holdings ({holdingsCount} holdings)
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -167,7 +221,7 @@ export const PortfolioAnalytics = () => {
                     <CardContent className="p-4">
                       <div className="text-center">
                         <p className="text-sm text-gray-600">Total Value</p>
-                        <p className="text-2xl font-bold">₹{portfolioData.totalValue.toLocaleString()}</p>
+                        <p className="text-2xl font-bold">₹{(portfolioData?.totalValue || 0).toLocaleString()}</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -175,8 +229,8 @@ export const PortfolioAnalytics = () => {
                     <CardContent className="p-4">
                       <div className="text-center">
                         <p className="text-sm text-gray-600">Total Gain/Loss</p>
-                        <p className={`text-2xl font-bold ${portfolioData.totalGainLoss >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          ₹{portfolioData.totalGainLoss.toLocaleString()}
+                        <p className={`text-2xl font-bold ${(portfolioData?.totalGainLoss || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          ₹{(portfolioData?.totalGainLoss || 0).toLocaleString()}
                         </p>
                       </div>
                     </CardContent>
@@ -185,25 +239,29 @@ export const PortfolioAnalytics = () => {
                     <CardContent className="p-4">
                       <div className="text-center">
                         <p className="text-sm text-gray-600">Asset Allocation</p>
-                        <ResponsiveContainer width="100%" height={150}>
-                          <PieChart>
-                            <Pie
-                              data={portfolioData.assetAllocation}
-                              dataKey="percentage"
-                              nameKey="type"
-                              cx="50%"
-                              cy="50%"
-                              outerRadius={50}
-                              fill="#8884d8"
-                              label
-                            >
-                              {portfolioData.assetAllocation.map((entry: any, index: number) => (
-                                <Cell key={`cell-${index}`} fill={`#${Math.floor(Math.random() * 16777215).toString(16)}`} />
-                              ))}
-                            </Pie>
-                            <Tooltip />
-                          </PieChart>
-                        </ResponsiveContainer>
+                        {portfolioData?.assetAllocation?.length > 0 ? (
+                          <ResponsiveContainer width="100%" height={150}>
+                            <PieChart>
+                              <Pie
+                                data={portfolioData.assetAllocation}
+                                dataKey="percentage"
+                                nameKey="type"
+                                cx="50%"
+                                cy="50%"
+                                outerRadius={50}
+                                fill="#8884d8"
+                                label
+                              >
+                                {portfolioData.assetAllocation.map((entry: any, index: number) => (
+                                  <Cell key={`cell-${index}`} fill={`#${Math.floor(Math.random() * 16777215).toString(16)}`} />
+                                ))}
+                              </Pie>
+                              <Tooltip />
+                            </PieChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <p className="text-sm text-gray-500 mt-4">No allocation data</p>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
@@ -238,7 +296,7 @@ export const PortfolioAnalytics = () => {
                       <CardContent className="p-4">
                         <div className="text-center">
                           <p className="text-sm text-gray-600">Volatility</p>
-                          <p className="text-2xl font-bold">{portfolioData.riskMetrics.volatility.toFixed(2)}%</p>
+                          <p className="text-2xl font-bold">{(portfolioData.riskMetrics.volatility || 0).toFixed(2)}%</p>
                         </div>
                       </CardContent>
                     </Card>
@@ -246,7 +304,7 @@ export const PortfolioAnalytics = () => {
                       <CardContent className="p-4">
                         <div className="text-center">
                           <p className="text-sm text-gray-600">Sharpe Ratio</p>
-                          <p className="text-2xl font-bold">{portfolioData.riskMetrics.sharpeRatio.toFixed(2)}</p>
+                          <p className="text-2xl font-bold">{(portfolioData.riskMetrics.sharpeRatio || 0).toFixed(2)}</p>
                         </div>
                       </CardContent>
                     </Card>
@@ -254,7 +312,7 @@ export const PortfolioAnalytics = () => {
                       <CardContent className="p-4">
                         <div className="text-center">
                           <p className="text-sm text-gray-600">Beta</p>
-                          <p className="text-2xl font-bold">{portfolioData.riskMetrics.beta.toFixed(2)}</p>
+                          <p className="text-2xl font-bold">{(portfolioData.riskMetrics.beta || 0).toFixed(2)}</p>
                         </div>
                       </CardContent>
                     </Card>
@@ -262,7 +320,7 @@ export const PortfolioAnalytics = () => {
                       <CardContent className="p-4">
                         <div className="text-center">
                           <p className="text-sm text-gray-600">Max Drawdown</p>
-                          <p className="text-2xl font-bold text-red-600">{portfolioData.riskMetrics.maxDrawdown.toFixed(2)}%</p>
+                          <p className="text-2xl font-bold text-red-600">{(portfolioData.riskMetrics.maxDrawdown || 0).toFixed(2)}%</p>
                         </div>
                       </CardContent>
                     </Card>
