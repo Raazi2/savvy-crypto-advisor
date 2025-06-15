@@ -168,7 +168,7 @@ const PaperTrading = () => {
     },
     {
       id: '4',
-4 title: 'Profitable Week',
+      title: 'Profitable Week',
       description: 'Achieve positive returns for 7 days',
       completed: false,
       points: 300
