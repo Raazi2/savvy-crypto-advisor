@@ -28,10 +28,20 @@ export const PortfolioAnalytics = () => {
   useEffect(() => {
     if (user) {
       fetchPortfolioAnalytics();
+    } else {
+      // Reset state when user is not authenticated
+      setPortfolioData(null);
+      setLoading(false);
     }
   }, [user]);
 
   const fetchPortfolioAnalytics = async () => {
+    if (!user) {
+      console.log('No user available for portfolio analytics');
+      setLoading(false);
+      return;
+    }
+
     try {
       setLoading(true);
       console.log('Fetching portfolio analytics for user:', user?.id);
@@ -47,21 +57,21 @@ export const PortfolioAnalytics = () => {
         throw error;
       }
       
-      // Ensure we have a valid data structure
+      // Ensure we have a valid data structure with safe fallbacks
       const validatedData = {
-        totalValue: data?.totalValue || 0,
-        totalGainLoss: data?.totalGainLoss || 0,
-        totalGainLossPercent: data?.totalGainLossPercent || 0,
-        holdings: data?.holdings || [],
-        assetAllocation: data?.assetAllocation || [],
-        riskMetrics: data?.riskMetrics || {
+        totalValue: data?.totalValue ?? 0,
+        totalGainLoss: data?.totalGainLoss ?? 0,
+        totalGainLossPercent: data?.totalGainLossPercent ?? 0,
+        holdings: Array.isArray(data?.holdings) ? data.holdings : [],
+        assetAllocation: Array.isArray(data?.assetAllocation) ? data.assetAllocation : [],
+        riskMetrics: data?.riskMetrics ?? {
           volatility: 0,
           sharpeRatio: 0,
           beta: 0,
           maxDrawdown: 0
         },
-        performanceHistory: data?.performanceHistory || [],
-        holdingsCount: data?.holdings?.length || 0
+        performanceHistory: Array.isArray(data?.performanceHistory) ? data.performanceHistory : [],
+        holdingsCount: Array.isArray(data?.holdings) ? data.holdings.length : 0
       };
       
       setPortfolioData(validatedData);
@@ -73,7 +83,7 @@ export const PortfolioAnalytics = () => {
         variant: "destructive"
       });
       
-      // Set default empty data structure to prevent undefined errors
+      // Set safe default data structure to prevent undefined errors
       setPortfolioData({
         totalValue: 0,
         totalGainLoss: 0,
@@ -95,6 +105,15 @@ export const PortfolioAnalytics = () => {
   };
 
   const addSampleData = async () => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "Please log in to add sample data.",
+        variant: "destructive"
+      });
+      return;
+    }
+
     try {
       setAddingSampleData(true);
       console.log('Adding sample data for user:', user?.id);
@@ -129,6 +148,23 @@ export const PortfolioAnalytics = () => {
     }
   };
 
+  // Early return if no user
+  if (!user) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Portfolio Analytics</CardTitle>
+            <CardDescription>Please log in to view your portfolio analytics</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <p className="text-gray-600">You need to be logged in to access portfolio analytics.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -147,9 +183,20 @@ export const PortfolioAnalytics = () => {
     );
   }
 
-  // Safe access to portfolio data with fallbacks
-  const hasHoldings = portfolioData?.holdings?.length > 0;
-  const holdingsCount = portfolioData?.holdingsCount || portfolioData?.holdings?.length || 0;
+  // Safe access to portfolio data with multiple fallback layers
+  const safePortfolioData = portfolioData ?? {
+    totalValue: 0,
+    totalGainLoss: 0,
+    totalGainLossPercent: 0,
+    holdings: [],
+    assetAllocation: [],
+    riskMetrics: { volatility: 0, sharpeRatio: 0, beta: 0, maxDrawdown: 0 },
+    performanceHistory: [],
+    holdingsCount: 0
+  };
+
+  const hasHoldings = Array.isArray(safePortfolioData.holdings) && safePortfolioData.holdings.length > 0;
+  const holdingsCount = safePortfolioData.holdingsCount ?? safePortfolioData.holdings?.length ?? 0;
 
   return (
     <div className="space-y-6">
@@ -221,7 +268,7 @@ export const PortfolioAnalytics = () => {
                     <CardContent className="p-4">
                       <div className="text-center">
                         <p className="text-sm text-gray-600">Total Value</p>
-                        <p className="text-2xl font-bold">₹{(portfolioData?.totalValue || 0).toLocaleString()}</p>
+                        <p className="text-2xl font-bold">₹{(safePortfolioData.totalValue || 0).toLocaleString()}</p>
                       </div>
                     </CardContent>
                   </Card>
@@ -229,8 +276,8 @@ export const PortfolioAnalytics = () => {
                     <CardContent className="p-4">
                       <div className="text-center">
                         <p className="text-sm text-gray-600">Total Gain/Loss</p>
-                        <p className={`text-2xl font-bold ${(portfolioData?.totalGainLoss || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          ₹{(portfolioData?.totalGainLoss || 0).toLocaleString()}
+                        <p className={`text-2xl font-bold ${(safePortfolioData.totalGainLoss || 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          ₹{(safePortfolioData.totalGainLoss || 0).toLocaleString()}
                         </p>
                       </div>
                     </CardContent>
@@ -239,11 +286,11 @@ export const PortfolioAnalytics = () => {
                     <CardContent className="p-4">
                       <div className="text-center">
                         <p className="text-sm text-gray-600">Asset Allocation</p>
-                        {portfolioData?.assetAllocation?.length > 0 ? (
+                        {Array.isArray(safePortfolioData.assetAllocation) && safePortfolioData.assetAllocation.length > 0 ? (
                           <ResponsiveContainer width="100%" height={150}>
                             <PieChart>
                               <Pie
-                                data={portfolioData.assetAllocation}
+                                data={safePortfolioData.assetAllocation}
                                 dataKey="percentage"
                                 nameKey="type"
                                 cx="50%"
@@ -252,7 +299,7 @@ export const PortfolioAnalytics = () => {
                                 fill="#8884d8"
                                 label
                               >
-                                {portfolioData.assetAllocation.map((entry: any, index: number) => (
+                                {safePortfolioData.assetAllocation.map((entry: any, index: number) => (
                                   <Cell key={`cell-${index}`} fill={`#${Math.floor(Math.random() * 16777215).toString(16)}`} />
                                 ))}
                               </Pie>
@@ -290,13 +337,13 @@ export const PortfolioAnalytics = () => {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                {portfolioData?.riskMetrics && (
+                {safePortfolioData.riskMetrics && (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                     <Card>
                       <CardContent className="p-4">
                         <div className="text-center">
                           <p className="text-sm text-gray-600">Volatility</p>
-                          <p className="text-2xl font-bold">{(portfolioData.riskMetrics.volatility || 0).toFixed(2)}%</p>
+                          <p className="text-2xl font-bold">{(safePortfolioData.riskMetrics.volatility || 0).toFixed(2)}%</p>
                         </div>
                       </CardContent>
                     </Card>
@@ -304,7 +351,7 @@ export const PortfolioAnalytics = () => {
                       <CardContent className="p-4">
                         <div className="text-center">
                           <p className="text-sm text-gray-600">Sharpe Ratio</p>
-                          <p className="text-2xl font-bold">{(portfolioData.riskMetrics.sharpeRatio || 0).toFixed(2)}</p>
+                          <p className="text-2xl font-bold">{(safePortfolioData.riskMetrics.sharpeRatio || 0).toFixed(2)}</p>
                         </div>
                       </CardContent>
                     </Card>
@@ -312,7 +359,7 @@ export const PortfolioAnalytics = () => {
                       <CardContent className="p-4">
                         <div className="text-center">
                           <p className="text-sm text-gray-600">Beta</p>
-                          <p className="text-2xl font-bold">{(portfolioData.riskMetrics.beta || 0).toFixed(2)}</p>
+                          <p className="text-2xl font-bold">{(safePortfolioData.riskMetrics.beta || 0).toFixed(2)}</p>
                         </div>
                       </CardContent>
                     </Card>
@@ -320,7 +367,7 @@ export const PortfolioAnalytics = () => {
                       <CardContent className="p-4">
                         <div className="text-center">
                           <p className="text-sm text-gray-600">Max Drawdown</p>
-                          <p className="text-2xl font-bold text-red-600">{(portfolioData.riskMetrics.maxDrawdown || 0).toFixed(2)}%</p>
+                          <p className="text-2xl font-bold text-red-600">{(safePortfolioData.riskMetrics.maxDrawdown || 0).toFixed(2)}%</p>
                         </div>
                       </CardContent>
                     </Card>
