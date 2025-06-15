@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -9,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { TrendingUp, TrendingDown, Activity, DollarSign, BarChart3, RefreshCw, Globe } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, DollarSign, BarChart3, RefreshCw, Globe, ExternalLink, ShoppingCart } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
@@ -37,6 +36,64 @@ interface Order {
   timestamp: string;
 }
 
+interface Broker {
+  id: string;
+  name: string;
+  logo: string;
+  deepLinkTemplate: string;
+  webLinkTemplate: string;
+  brokerage: string;
+  features: string[];
+}
+
+const INDIAN_BROKERS: Broker[] = [
+  {
+    id: 'zerodha',
+    name: 'Zerodha',
+    logo: '🟢',
+    deepLinkTemplate: 'kite://orders/buy?tradingsymbol={symbol}&exchange=NSE&quantity={quantity}',
+    webLinkTemplate: 'https://kite.zerodha.com/?symbol={symbol}',
+    brokerage: '₹20 per order',
+    features: ['Free delivery', 'Advanced charts', 'Kite API']
+  },
+  {
+    id: 'angelone',
+    name: 'Angel One',
+    logo: '😇',
+    deepLinkTemplate: 'angelone://trade?symbol={symbol}&quantity={quantity}&action=buy',
+    webLinkTemplate: 'https://trade.angelone.in/trade?symbol={symbol}',
+    brokerage: '₹20 per order',
+    features: ['Free delivery', '4x margin', 'Research reports']
+  },
+  {
+    id: 'upstox',
+    name: 'Upstox',
+    logo: '⬆️',
+    deepLinkTemplate: 'upstox://trade?symbol={symbol}&quantity={quantity}',
+    webLinkTemplate: 'https://pro.upstox.com/trade?symbol={symbol}',
+    brokerage: '₹20 per order',
+    features: ['Free delivery', '0.05% intraday', 'Mobile first']
+  },
+  {
+    id: 'groww',
+    name: 'Groww',
+    logo: '🌱',
+    deepLinkTemplate: 'groww://stocks/{symbol}',
+    webLinkTemplate: 'https://groww.in/stocks/{symbol}',
+    brokerage: '₹20 per order',
+    features: ['Free delivery', 'Simple UI', 'Mutual funds']
+  },
+  {
+    id: 'icici',
+    name: 'ICICI Direct',
+    logo: '🏦',
+    deepLinkTemplate: 'icicidirect://trade?symbol={symbol}',
+    webLinkTemplate: 'https://secure.icicidirect.com/trading/equity/stock_detail.aspx?Symbol={symbol}',
+    brokerage: '₹25 per order',
+    features: ['Research reports', 'IPO access', 'Banking integration']
+  }
+];
+
 export const Trading = () => {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -53,7 +110,8 @@ export const Trading = () => {
   });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [usdToInr, setUsdToInr] = useState(83.12); // Current USD to INR rate
+  const [usdToInr, setUsdToInr] = useState(83.12);
+  const [showBrokerComparison, setShowBrokerComparison] = useState(false);
 
   useEffect(() => {
     fetchTradingData();
@@ -203,6 +261,55 @@ export const Trading = () => {
     }
   };
 
+  const handleBrokerRedirect = (broker: Broker, stock: StockData, quantity: number = 1) => {
+    try {
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      
+      // Try deep link first on mobile
+      if (isMobile) {
+        const deepLink = broker.deepLinkTemplate
+          .replace('{symbol}', stock.symbol)
+          .replace('{quantity}', quantity.toString());
+        
+        // Try to open the app
+        const link = document.createElement('a');
+        link.href = deepLink;
+        link.click();
+        
+        // Fallback to web after a delay
+        setTimeout(() => {
+          const webLink = broker.webLinkTemplate.replace('{symbol}', stock.symbol);
+          window.open(webLink, '_blank');
+        }, 2000);
+      } else {
+        // Open web version directly on desktop
+        const webLink = broker.webLinkTemplate.replace('{symbol}', stock.symbol);
+        window.open(webLink, '_blank');
+      }
+
+      // Track the redirect for analytics
+      console.log(`Redirected to ${broker.name} for ${stock.symbol}`);
+      
+      toast({
+        title: "Redirecting to Broker",
+        description: `Opening ${broker.name} to trade ${stock.symbol}`,
+      });
+
+    } catch (error) {
+      console.error('Error redirecting to broker:', error);
+      toast({
+        title: "Redirect Failed",
+        description: "Unable to open broker application",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const getPreferredBroker = (): Broker => {
+    const preferredBrokerId = settings?.preferences?.defaultBroker || 'zerodha';
+    return INDIAN_BROKERS.find(broker => broker.id === preferredBrokerId) || INDIAN_BROKERS[0];
+  };
+
   const chartData = selectedStock ? [
     { time: '09:30', price: selectedStock.open },
     { time: '10:00', price: selectedStock.open * 1.02 },
@@ -245,16 +352,73 @@ export const Trading = () => {
             Real-time trading with live market data • USD to INR: ₹{usdToInr}
           </p>
         </div>
-        <Button 
-          onClick={fetchTradingData} 
-          disabled={refreshing}
-          variant="outline"
-          size="sm"
-        >
-          <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Button 
+            onClick={() => setShowBrokerComparison(!showBrokerComparison)}
+            variant="outline"
+            size="sm"
+          >
+            <ShoppingCart className="w-4 h-4 mr-2" />
+            Compare Brokers
+          </Button>
+          <Button 
+            onClick={fetchTradingData} 
+            disabled={refreshing}
+            variant="outline"
+            size="sm"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
+
+      {/* Broker Comparison Panel */}
+      {showBrokerComparison && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <ShoppingCart className="w-5 h-5 mr-2" />
+              Broker Comparison
+            </CardTitle>
+            <CardDescription>
+              Choose your preferred broker for executing trades
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {INDIAN_BROKERS.map((broker) => (
+                <div key={broker.id} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center space-x-2">
+                      <span className="text-2xl">{broker.logo}</span>
+                      <h3 className="font-semibold">{broker.name}</h3>
+                    </div>
+                    <Badge variant="outline">{broker.brokerage}</Badge>
+                  </div>
+                  <div className="space-y-2 mb-4">
+                    {broker.features.map((feature, index) => (
+                      <div key={index} className="text-sm text-gray-600 dark:text-gray-400">
+                        • {feature}
+                      </div>
+                    ))}
+                  </div>
+                  {selectedStock && (
+                    <Button 
+                      onClick={() => handleBrokerRedirect(broker, selectedStock, 1)}
+                      className="w-full"
+                      size="sm"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      Trade on {broker.name}
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Stock List */}
@@ -343,6 +507,48 @@ export const Trading = () => {
                     <p className="text-sm text-gray-600 dark:text-gray-400">Volume</p>
                     <p className="text-lg font-bold">{selectedStock.volume.toLocaleString()}</p>
                   </div>
+                </div>
+
+                {/* Quick Buy Buttons */}
+                <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20 rounded-lg">
+                  <h3 className="font-semibold mb-3 flex items-center">
+                    <ShoppingCart className="w-4 h-4 mr-2" />
+                    Quick Trade on Your Broker
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    <Button 
+                      onClick={() => handleBrokerRedirect(getPreferredBroker(), selectedStock, 1)}
+                      className="bg-green-600 hover:bg-green-700"
+                      size="sm"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      Buy 1 Share
+                    </Button>
+                    <Button 
+                      onClick={() => handleBrokerRedirect(getPreferredBroker(), selectedStock, 5)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Buy 5 Shares
+                    </Button>
+                    <Button 
+                      onClick={() => handleBrokerRedirect(getPreferredBroker(), selectedStock, 10)}
+                      variant="outline"
+                      size="sm"
+                    >
+                      Buy 10 Shares
+                    </Button>
+                    <Button 
+                      onClick={() => setShowBrokerComparison(true)}
+                      variant="ghost"
+                      size="sm"
+                    >
+                      Choose Broker
+                    </Button>
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-2">
+                    Redirects to {getPreferredBroker().name} • Change in Settings
+                  </p>
                 </div>
 
                 <ResponsiveContainer width="100%" height={300}>

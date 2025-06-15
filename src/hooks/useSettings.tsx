@@ -1,4 +1,3 @@
-
 import { useState, useEffect, createContext, useContext } from 'react';
 import { useAuth } from './useAuth';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,6 +25,7 @@ interface SettingsData {
     timezone: string;
     dateFormat: string;
     numberFormat: string;
+    defaultBroker: string;
   };
   privacy: {
     sharePortfolio: boolean;
@@ -67,7 +67,8 @@ const defaultSettings: SettingsData = {
     language: 'en',
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     dateFormat: 'MM/DD/YYYY',
-    numberFormat: 'en-US'
+    numberFormat: 'en-US',
+    defaultBroker: 'zerodha'
   },
   privacy: {
     sharePortfolio: false,
