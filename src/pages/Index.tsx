@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -34,6 +33,7 @@ import LoanCalculator from "@/components/LoanCalculator";
 import PaperTrading from "@/components/PaperTrading";
 import { MutualFundDashboard } from "@/components/MutualFundDashboard";
 import { TaxPlanningDashboard } from "@/components/TaxPlanningDashboard";
+import { BlockchainDashboard } from "@/components/BlockchainDashboard";
 
 const Index = () => {
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -338,6 +338,14 @@ const Index = () => {
 
           <TabsContent value="mutual-funds" className="space-y-6 mt-6">
             <MutualFundDashboard />
+          </TabsContent>
+
+          <TabsContent value="tax-planning" className="space-y-6 mt-6">
+            <TaxPlanningDashboard />
+          </TabsContent>
+
+          <TabsContent value="blockchain" className="space-y-6 mt-6">
+            <BlockchainDashboard />
           </TabsContent>
 
           <TabsContent value="goal-planning" className="space-y-6 mt-6">
