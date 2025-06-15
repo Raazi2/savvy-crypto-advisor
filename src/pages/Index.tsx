@@ -10,7 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Home, MessageSquare, Wallet, Shield, Settings, Moon, Sun, Menu, X, LogOut, User, BarChart3, Newspaper, GraduationCap, Users, Bell, TrendingUp, PieChart, Filter, Lightbulb, Target, Calculator, PlayCircle, ChevronDown } from "lucide-react";
+import { Home, MessageSquare, Wallet, Shield, Settings, Moon, Sun, Menu, X, LogOut, User, BarChart3, Newspaper, GraduationCap, Users, Bell, TrendingUp, PieChart, Filter, Lightbulb, Target, Calculator, PlayCircle, ChevronDown, IndianRupee, Globe } from "lucide-react";
 import { DashboardHome } from "@/components/DashboardHome";
 import { AIChat } from "@/components/AIChat";
 import { WalletViewer } from "@/components/WalletViewer";
@@ -24,6 +24,8 @@ import { Notifications } from "@/components/Notifications";
 import { Trading } from "@/components/Trading";
 import { PortfolioAnalytics } from "@/components/PortfolioAnalytics";
 import { MarketScreener } from "@/components/MarketScreener";
+import { StockMarketTabs } from "@/components/StockMarketTabs";
+import { IndianMarketDashboard } from "@/components/IndianMarketDashboard";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { GoalPlanning } from "@/components/GoalPlanning";
@@ -151,6 +153,37 @@ const Index = () => {
                 </TabsTrigger>
               </TabsList>
 
+              {/* Market Dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="h-12 rounded-2xl bg-white/60 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 backdrop-blur-xl">
+                    <TrendingUp className="w-4 h-4 mr-1" />
+                    <span className="hidden sm:inline">Markets</span>
+                    <ChevronDown className="w-3 h-3 ml-1" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-56 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+                  <DropdownMenuLabel>Global Markets</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handleTabChange("global-markets")}>
+                    <Globe className="w-4 h-4 mr-2" />
+                    All Markets
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleTabChange("indian-market")}>
+                    <IndianRupee className="w-4 h-4 mr-2" />
+                    Indian Market
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleTabChange("us-market")}>
+                    <TrendingUp className="w-4 h-4 mr-2" />
+                    US Market
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleTabChange("screener")}>
+                    <Filter className="w-4 h-4 mr-2" />
+                    Market Screener
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
               {/* Analytics Dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -171,10 +204,6 @@ const Index = () => {
                     <BarChart3 className="w-4 h-4 mr-2" />
                     Reports
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => handleTabChange("screener")}>
-                    <Filter className="w-4 h-4 mr-2" />
-                    Market Screener
-                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
 
@@ -188,12 +217,8 @@ const Index = () => {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-56 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
-                  <DropdownMenuLabel>Trading & Markets</DropdownMenuLabel>
+                  <DropdownMenuLabel>Trading & Practice</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => handleTabChange("trading")}>
-                    <TrendingUp className="w-4 h-4 mr-2" />
-                    Live Trading
-                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleTabChange("paper-trading")}>
                     <PlayCircle className="w-4 h-4 mr-2" />
                     Paper Trading
@@ -289,6 +314,18 @@ const Index = () => {
             <DashboardHome />
           </TabsContent>
 
+          <TabsContent value="global-markets" className="space-y-6 mt-6">
+            <StockMarketTabs />
+          </TabsContent>
+
+          <TabsContent value="indian-market" className="space-y-6 mt-6">
+            <IndianMarketDashboard />
+          </TabsContent>
+
+          <TabsContent value="us-market" className="space-y-6 mt-6">
+            <Trading />
+          </TabsContent>
+
           <TabsContent value="portfolio-analytics" className="space-y-6 mt-6">
             <PortfolioAnalytics />
           </TabsContent>
@@ -315,10 +352,6 @@ const Index = () => {
 
           <TabsContent value="wallet" className="space-y-6 mt-6">
             <WalletViewer />
-          </TabsContent>
-
-          <TabsContent value="trading" className="space-y-6 mt-6">
-            <Trading />
           </TabsContent>
 
           <TabsContent value="screener" className="space-y-6 mt-6">

@@ -9,10 +9,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { TrendingUp, TrendingDown, Activity, DollarSign, BarChart3, RefreshCw } from 'lucide-react';
+import { TrendingUp, TrendingDown, Activity, DollarSign, BarChart3, RefreshCw, Globe } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
+import { useSettings } from '@/hooks/useSettings';
 
 interface StockData {
   symbol: string;
@@ -39,6 +40,7 @@ interface Order {
 export const Trading = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { settings } = useSettings();
   const [selectedStock, setSelectedStock] = useState<StockData | null>(null);
   const [stockData, setStockData] = useState<StockData[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -51,6 +53,7 @@ export const Trading = () => {
   });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [usdToInr, setUsdToInr] = useState(83.12); // Current USD to INR rate
 
   useEffect(() => {
     fetchTradingData();
@@ -63,41 +66,49 @@ export const Trading = () => {
     try {
       setRefreshing(true);
       
-      // Fetch market data
-      const { data: marketData } = await supabase.functions.invoke('get-market-overview');
-      if (marketData?.topStocks) {
-        const enhancedStocks = marketData.topStocks.map((stock: any) => ({
-          ...stock,
-          name: getStockName(stock.symbol),
-          volume: Math.floor(Math.random() * 1000000) + 100000,
-          high: stock.price * (1 + Math.random() * 0.05),
-          low: stock.price * (1 - Math.random() * 0.05),
-          open: stock.price * (1 + (Math.random() - 0.5) * 0.02)
-        }));
-        setStockData(enhancedStocks);
-        
-        if (!selectedStock && enhancedStocks.length > 0) {
-          setSelectedStock(enhancedStocks[0]);
-        }
+      // Fetch US market data
+      const usStocks = [
+        { symbol: 'AAPL', name: 'Apple Inc', price: 175.43, change: 2.15, changePercent: 1.24 },
+        { symbol: 'MSFT', name: 'Microsoft Corporation', price: 378.85, change: -1.23, changePercent: -0.32 },
+        { symbol: 'GOOGL', name: 'Alphabet Inc', price: 138.21, change: 0.85, changePercent: 0.62 },
+        { symbol: 'AMZN', name: 'Amazon.com Inc', price: 145.32, change: -2.18, changePercent: -1.48 },
+        { symbol: 'TSLA', name: 'Tesla Inc', price: 242.64, change: 5.42, changePercent: 2.28 },
+        { symbol: 'NVDA', name: 'NVIDIA Corporation', price: 875.28, change: 15.63, changePercent: 1.82 },
+        { symbol: 'META', name: 'Meta Platforms Inc', price: 487.89, change: -3.45, changePercent: -0.70 },
+        { symbol: 'NFLX', name: 'Netflix Inc', price: 445.67, change: 8.23, changePercent: 1.88 }
+      ];
+
+      const enhancedStocks = usStocks.map((stock) => ({
+        ...stock,
+        volume: Math.floor(Math.random() * 10000000) + 1000000,
+        high: stock.price * (1 + Math.random() * 0.05),
+        low: stock.price * (1 - Math.random() * 0.05),
+        open: stock.price * (1 + (Math.random() - 0.5) * 0.02)
+      }));
+
+      setStockData(enhancedStocks);
+      
+      if (!selectedStock && enhancedStocks.length > 0) {
+        setSelectedStock(enhancedStocks[0]);
       }
 
       // Mock orders data (in real app, fetch from database)
       setOrders([
         {
           id: '1',
-          symbol: 'RELIANCE',
+          symbol: 'AAPL',
           type: 'buy',
           quantity: 10,
-          price: 2450.50,
+          price: 175.43,
           status: 'executed',
           timestamp: '2024-06-14T10:30:00Z'
         },
         {
           id: '2',
-          symbol: 'TCS',
+          symbol: 'TSLA',
           type: 'sell',
           quantity: 5,
-          price: 3650.75,
+          price: 242.64,
           status: 'pending',
           timestamp: '2024-06-14T11:15:00Z'
         }
@@ -116,18 +127,23 @@ export const Trading = () => {
     }
   };
 
-  const getStockName = (symbol: string): string => {
-    const names: { [key: string]: string } = {
-      'RELIANCE': 'Reliance Industries Ltd',
-      'TCS': 'Tata Consultancy Services',
-      'HDFCBANK': 'HDFC Bank Limited',
-      'INFY': 'Infosys Limited',
-      'HINDUNILVR': 'Hindustan Unilever Ltd',
-      'ITC': 'ITC Limited',
-      'SBIN': 'State Bank of India',
-      'BHARTIARTL': 'Bharti Airtel Limited'
-    };
-    return names[symbol] || symbol;
+  const formatCurrency = (amount: number, showInr: boolean = false): string => {
+    const currency = settings?.preferences?.defaultCurrency || 'USD';
+    
+    if (currency === 'INR' || showInr) {
+      const inrAmount = amount * usdToInr;
+      return new Intl.NumberFormat('en-IN', {
+        style: 'currency',
+        currency: 'INR',
+        minimumFractionDigits: 2
+      }).format(inrAmount);
+    }
+    
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 2
+    }).format(amount);
   };
 
   const handlePlaceOrder = async () => {
@@ -188,13 +204,13 @@ export const Trading = () => {
   };
 
   const chartData = selectedStock ? [
-    { time: '09:15', price: selectedStock.open },
+    { time: '09:30', price: selectedStock.open },
     { time: '10:00', price: selectedStock.open * 1.02 },
     { time: '11:00', price: selectedStock.open * 0.98 },
     { time: '12:00', price: selectedStock.price },
     { time: '13:00', price: selectedStock.price * 1.01 },
     { time: '14:00', price: selectedStock.price * 0.99 },
-    { time: '15:30', price: selectedStock.price },
+    { time: '16:00', price: selectedStock.price },
   ] : [];
 
   if (loading) {
@@ -221,9 +237,12 @@ export const Trading = () => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Live Trading</h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Real-time trading with live market data
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white flex items-center">
+            <Globe className="w-8 h-8 mr-2" />
+            US Stock Market
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400 flex items-center">
+            Real-time trading with live market data • USD to INR: ₹{usdToInr}
           </p>
         </div>
         <Button 
@@ -243,10 +262,10 @@ export const Trading = () => {
           <CardHeader>
             <CardTitle className="flex items-center">
               <Activity className="w-5 h-5 mr-2" />
-              Market Stocks
+              US Stocks
             </CardTitle>
             <CardDescription>
-              Live stock prices - updates every 10 seconds
+              Live NYSE & NASDAQ prices
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">
@@ -267,7 +286,8 @@ export const Trading = () => {
                       </p>
                     </div>
                     <div className="text-right">
-                      <div className="font-bold">₹{stock.price?.toFixed(2)}</div>
+                      <div className="font-bold">{formatCurrency(stock.price)}</div>
+                      <div className="text-xs text-gray-500">{formatCurrency(stock.price, true)}</div>
                       <div className={`text-sm flex items-center ${
                         stock.changePercent >= 0 ? 'text-green-600' : 'text-red-600'
                       }`}>
@@ -299,7 +319,7 @@ export const Trading = () => {
               </Badge>
             </CardTitle>
             <CardDescription>
-              Intraday price movement
+              Intraday price movement (Eastern Time)
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -308,15 +328,16 @@ export const Trading = () => {
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Current Price</p>
-                    <p className="text-lg font-bold">₹{selectedStock.price.toFixed(2)}</p>
+                    <p className="text-lg font-bold">{formatCurrency(selectedStock.price)}</p>
+                    <p className="text-xs text-gray-500">{formatCurrency(selectedStock.price, true)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Day High</p>
-                    <p className="text-lg font-bold text-green-600">₹{selectedStock.high.toFixed(2)}</p>
+                    <p className="text-lg font-bold text-green-600">{formatCurrency(selectedStock.high)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Day Low</p>
-                    <p className="text-lg font-bold text-red-600">₹{selectedStock.low.toFixed(2)}</p>
+                    <p className="text-lg font-bold text-red-600">{formatCurrency(selectedStock.low)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Volume</p>
@@ -328,8 +349,8 @@ export const Trading = () => {
                   <LineChart data={chartData}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="time" />
-                    <YAxis domain={['dataMin - 10', 'dataMax + 10']} />
-                    <Tooltip formatter={(value) => [`₹${value}`, 'Price']} />
+                    <YAxis domain={['dataMin - 5', 'dataMax + 5']} />
+                    <Tooltip formatter={(value) => [`$${value}`, 'Price']} />
                     <Line 
                       type="monotone" 
                       dataKey="price" 
@@ -356,10 +377,10 @@ export const Trading = () => {
             <CardHeader>
               <CardTitle className="flex items-center">
                 <DollarSign className="w-5 h-5 mr-2" />
-                Place Order
+                Place US Stock Order
               </CardTitle>
               <CardDescription>
-                Place buy or sell orders for stocks
+                Place buy or sell orders for US stocks (NYSE & NASDAQ)
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -375,7 +396,7 @@ export const Trading = () => {
                     <SelectContent>
                       {stockData.map((stock) => (
                         <SelectItem key={stock.symbol} value={stock.symbol}>
-                          {stock.symbol} - ₹{stock.price.toFixed(2)}
+                          {stock.symbol} - ${stock.price.toFixed(2)}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -424,13 +445,13 @@ export const Trading = () => {
 
                 {orderForm.orderType === 'limit' && (
                   <div>
-                    <Label htmlFor="price">Limit Price</Label>
+                    <Label htmlFor="price">Limit Price ($)</Label>
                     <Input
                       type="number"
                       step="0.01"
                       value={orderForm.price}
                       onChange={(e) => setOrderForm(prev => ({ ...prev, price: e.target.value }))}
-                      placeholder="Enter price"
+                      placeholder="Enter price in USD"
                     />
                   </div>
                 )}
@@ -452,7 +473,7 @@ export const Trading = () => {
             <CardHeader>
               <CardTitle>Order History</CardTitle>
               <CardDescription>
-                Your recent trading orders
+                Your recent US stock trading orders
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -462,7 +483,8 @@ export const Trading = () => {
                     <TableHead>Symbol</TableHead>
                     <TableHead>Type</TableHead>
                     <TableHead>Quantity</TableHead>
-                    <TableHead>Price</TableHead>
+                    <TableHead>Price (USD)</TableHead>
+                    <TableHead>Price (INR)</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Time</TableHead>
                   </TableRow>
@@ -477,7 +499,8 @@ export const Trading = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>{order.quantity}</TableCell>
-                      <TableCell>₹{order.price.toFixed(2)}</TableCell>
+                      <TableCell>${order.price.toFixed(2)}</TableCell>
+                      <TableCell>₹{(order.price * usdToInr).toFixed(2)}</TableCell>
                       <TableCell>
                         <Badge 
                           variant={

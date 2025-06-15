@@ -51,10 +51,11 @@ class NotificationService {
   }
 
   // Specific notification methods
-  async priceAlert(symbol: string, price: number, targetPrice: number) {
+  async priceAlert(symbol: string, price: number, targetPrice: number, currency: string = 'USD') {
+    const currencySymbol = currency === 'INR' ? '₹' : '$';
     await this.sendNotification('priceAlerts', {
       title: 'Price Alert',
-      message: `${symbol} has reached $${price} (target: $${targetPrice})`,
+      message: `${symbol} has reached ${currencySymbol}${price} (target: ${currencySymbol}${targetPrice})`,
       type: 'info'
     });
   }
@@ -67,18 +68,20 @@ class NotificationService {
     });
   }
 
-  async portfolioUpdate(change: number, value: number) {
+  async portfolioUpdate(change: number, value: number, currency: string = 'USD') {
+    const currencySymbol = currency === 'INR' ? '₹' : '$';
     await this.sendNotification('portfolioUpdates', {
       title: 'Portfolio Update',
-      message: `Your portfolio ${change >= 0 ? 'gained' : 'lost'} ${Math.abs(change)}% today. Current value: $${value.toLocaleString()}`,
+      message: `Your portfolio ${change >= 0 ? 'gained' : 'lost'} ${Math.abs(change)}% today. Current value: ${currencySymbol}${value.toLocaleString()}`,
       type: change >= 0 ? 'success' : 'warning'
     });
   }
 
-  async tradeConfirmation(type: string, symbol: string, quantity: number, price: number) {
+  async tradeConfirmation(type: string, symbol: string, quantity: number, price: number, currency: string = 'USD') {
+    const currencySymbol = currency === 'INR' ? '₹' : '$';
     await this.sendNotification('tradeConfirmations', {
       title: 'Trade Executed',
-      message: `${type} order for ${quantity} shares of ${symbol} at $${price} has been filled`,
+      message: `${type} order for ${quantity} shares of ${symbol} at ${currencySymbol}${price} has been filled`,
       type: 'success'
     });
   }
@@ -87,6 +90,39 @@ class NotificationService {
     await this.sendNotification('marketNews', {
       title: 'Market News',
       message: headline,
+      type: 'info'
+    });
+  }
+
+  // Indian-specific notifications
+  async sipReminder(amount: number, fundName: string) {
+    await this.sendNotification('portfolioUpdates', {
+      title: 'SIP Reminder',
+      message: `Your SIP of ₹${amount} for ${fundName} is due tomorrow`,
+      type: 'info'
+    });
+  }
+
+  async taxSavingAlert(remainingAmount: number) {
+    await this.sendNotification('educationalContent', {
+      title: 'Tax Saving Alert',
+      message: `You can still save ₹${remainingAmount} in taxes under Section 80C this financial year`,
+      type: 'info'
+    });
+  }
+
+  async ppfMaturityAlert(amount: number, daysLeft: number) {
+    await this.sendNotification('portfolioUpdates', {
+      title: 'PPF Maturity Alert',
+      message: `Your PPF worth ₹${amount.toLocaleString()} will mature in ${daysLeft} days`,
+      type: 'info'
+    });
+  }
+
+  async indianMarketAlert(message: string) {
+    await this.sendNotification('marketNews', {
+      title: 'Indian Market Alert',
+      message,
       type: 'info'
     });
   }
