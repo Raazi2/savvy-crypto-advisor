@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Send, Bot, User, Settings, AlertCircle, Globe, TrendingUp } from "lucide-react";
+import { Send, Bot, User, Settings, AlertCircle, Globe, TrendingUp, CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -17,9 +17,7 @@ interface Message {
 }
 
 const AI_MODELS = [
-  { id: 'perplexity/llama-3.1-sonar-small-128k-online', name: 'Perplexity Sonar Small', provider: 'Live Data', description: 'Real-time web search & current data', hasInternet: true },
-  { id: 'perplexity/llama-3.1-sonar-large-128k-online', name: 'Perplexity Sonar Large', provider: 'Live Data', description: 'Advanced real-time analysis', hasInternet: true },
-  { id: 'perplexity/llama-3.1-sonar-huge-128k-online', name: 'Perplexity Sonar Huge', provider: 'Live Data', description: 'Most capable real-time model', hasInternet: true },
+  // Free Models (Default)
   { id: 'mistralai/devstral-small:free', name: 'Devstral Small', provider: 'Free', description: '24B params, optimized for coding', hasInternet: false },
   { id: 'google/gemma-3n-4b:free', name: 'Gemma 3n 4B', provider: 'Free', description: 'Multimodal, mobile-optimized', hasInternet: false },
   { id: 'meta-llama/llama-3.3-8b-instruct:free', name: 'Llama 3.3 8B', provider: 'Free', description: 'Ultra-fast, lightweight', hasInternet: false },
@@ -28,6 +26,11 @@ const AI_MODELS = [
   { id: 'microsoft/phi-4-reasoning:free', name: 'Phi 4 Reasoning', provider: 'Free', description: 'Step-by-step logic', hasInternet: false },
   { id: 'opengvlab/internvl3-14b:free', name: 'InternVL3 14B', provider: 'Free', description: 'Multimodal, GUI agents', hasInternet: false },
   { id: 'opengvlab/internvl3-2b:free', name: 'InternVL3 2B', provider: 'Free', description: 'Fast inference, multimodal', hasInternet: false },
+  
+  // Live Data Models (Require Credits)
+  { id: 'perplexity/llama-3.1-sonar-small-128k-online', name: 'Perplexity Sonar Small', provider: 'Live Data', description: 'Real-time web search & current data', hasInternet: true },
+  { id: 'perplexity/llama-3.1-sonar-large-128k-online', name: 'Perplexity Sonar Large', provider: 'Live Data', description: 'Advanced real-time analysis', hasInternet: true },
+  { id: 'perplexity/llama-3.1-sonar-huge-128k-online', name: 'Perplexity Sonar Huge', provider: 'Live Data', description: 'Most capable real-time model', hasInternet: true },
 ];
 
 export const AIChat = () => {
@@ -35,12 +38,12 @@ export const AIChat = () => {
     {
       id: '1',
       role: 'assistant',
-      content: "Hello! I'm your AI financial advisor with access to real-time data. I can fetch live market information, current stock prices, latest news, and up-to-date financial data. What would you like to know about the current market situation?",
+      content: "Hello! I'm your AI financial advisor. I'm currently using a free model for responses. If you need real-time market data, please ensure you have OpenRouter credits and switch to a Live Data model. What can I help you with today?",
       timestamp: new Date(),
     }
   ]);
   const [input, setInput] = useState('');
-  const [selectedModel, setSelectedModel] = useState('perplexity/llama-3.1-sonar-small-128k-online');
+  const [selectedModel, setSelectedModel] = useState('mistralai/devstral-small:free');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -83,19 +86,35 @@ export const AIChat = () => {
         
         if (data.error.includes('credits exhausted') || data.error.includes('402')) {
           toast({
-            title: "API Credits Exhausted",
-            description: "Please add credits or try a free model.",
+            title: "OpenRouter Credits Required",
+            description: (
+              <div className="space-y-2">
+                <p>Live data models require OpenRouter credits.</p>
+                <p>• Add credits at OpenRouter.ai, or</p>
+                <p>• Switch to a free model for basic responses</p>
+              </div>
+            ),
             variant: "destructive",
           });
+          
+          // Auto-switch to a free model
+          const freeModel = AI_MODELS.find(m => m.provider === 'Free');
+          if (freeModel && selectedModel !== freeModel.id) {
+            setSelectedModel(freeModel.id);
+            toast({
+              title: "Switched to Free Model",
+              description: `Now using ${freeModel.name} - no credits required`,
+            });
+          }
         } else if (data.error.includes('model') && data.error.includes('not')) {
           toast({
             title: "Model Unavailable", 
-            description: "This AI model is not available. Trying a different model...",
+            description: "This AI model is not available. Switching to a free model...",
             variant: "destructive",
           });
-          const availableModels = AI_MODELS.filter(m => m.id !== selectedModel);
-          if (availableModels.length > 0) {
-            setSelectedModel(availableModels[0].id);
+          const freeModel = AI_MODELS.find(m => m.provider === 'Free');
+          if (freeModel) {
+            setSelectedModel(freeModel.id);
           }
         } else {
           toast({
@@ -154,6 +173,11 @@ export const AIChat = () => {
                 Live Data
               </Badge>
             )}
+            {currentModel?.provider === 'Free' && (
+              <Badge className="bg-green-500/20 text-green-400 flex items-center gap-1">
+                Free
+              </Badge>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -163,21 +187,34 @@ export const AIChat = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {AI_MODELS.map((model) => (
+                <div className="px-2 py-1 text-xs font-semibold text-green-600 dark:text-green-400">
+                  Free Models (No Credits Required)
+                </div>
+                {AI_MODELS.filter(m => m.provider === 'Free').map((model) => (
                   <SelectItem key={model.id} value={model.id}>
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{model.name}</span>
-                        <Badge 
-                          variant="secondary" 
-                          className={`text-xs ${
-                            model.hasInternet 
-                              ? 'bg-blue-500/20 text-blue-400' 
-                              : 'bg-green-500/20 text-green-400'
-                          }`}
-                        >
-                          {model.hasInternet && <Globe className="w-3 h-3 mr-1" />}
-                          {model.provider}
+                        <Badge variant="secondary" className="text-xs bg-green-500/20 text-green-400">
+                          Free
+                        </Badge>
+                      </div>
+                      <span className="text-xs text-gray-500">{model.description}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+                
+                <div className="px-2 py-1 text-xs font-semibold text-blue-600 dark:text-blue-400 border-t mt-2 pt-2">
+                  Live Data Models (Require OpenRouter Credits)
+                </div>
+                {AI_MODELS.filter(m => m.hasInternet).map((model) => (
+                  <SelectItem key={model.id} value={model.id}>
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{model.name}</span>
+                        <Badge variant="secondary" className="text-xs bg-blue-500/20 text-blue-400">
+                          <Globe className="w-3 h-3 mr-1" />
+                          Live Data
                         </Badge>
                       </div>
                       <span className="text-xs text-gray-500">{model.description}</span>
@@ -195,7 +232,11 @@ export const AIChat = () => {
             </Badge>
           </div>
           
-          <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+          <div className={`mt-4 p-3 border rounded-lg ${
+            currentModel?.hasInternet 
+              ? 'bg-blue-500/10 border-blue-500/20' 
+              : 'bg-green-500/10 border-green-500/20'
+          }`}>
             <div className="flex items-start gap-2">
               {currentModel?.hasInternet ? (
                 <>
@@ -205,15 +246,19 @@ export const AIChat = () => {
                     <p className="text-xs opacity-80 mt-1">
                       This model can access real-time information including current stock prices, latest news, market data, and live financial information.
                     </p>
+                    <p className="text-xs opacity-80 mt-1 flex items-center gap-1">
+                      <CreditCard className="w-3 h-3" />
+                      Requires OpenRouter credits
+                    </p>
                   </div>
                 </>
               ) : (
                 <>
-                  <AlertCircle className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
-                  <div className="text-sm text-blue-300">
-                    <p className="font-medium">Offline Model</p>
+                  <AlertCircle className="w-4 h-4 text-green-400 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-green-300">
+                    <p className="font-medium">Free Model Active</p>
                     <p className="text-xs opacity-80 mt-1">
-                      This model provides analysis based on training data but cannot access live information. Switch to a "Live Data" model for current market data.
+                      This free model provides analysis based on training data but cannot access live information. Switch to a "Live Data" model for current market data.
                     </p>
                   </div>
                 </>
