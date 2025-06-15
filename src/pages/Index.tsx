@@ -238,6 +238,10 @@ const Index = () => {
                 <DropdownMenuContent className="w-56 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
                   <DropdownMenuLabel>Financial Planning</DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handleTabChange("mutual-funds")}>
+                    <PiggyBank className="w-4 h-4 mr-2" />
+                    Mutual Funds
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => handleTabChange("goal-planning")}>
                     <Target className="w-4 h-4 mr-2" />
                     Goal Planning
