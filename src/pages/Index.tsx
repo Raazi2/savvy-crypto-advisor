@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -333,6 +334,10 @@ const Index = () => {
 
           <TabsContent value="portfolio-analytics" className="space-y-6 mt-6">
             <PortfolioAnalytics />
+          </TabsContent>
+
+          <TabsContent value="mutual-funds" className="space-y-6 mt-6">
+            <MutualFundDashboard />
           </TabsContent>
 
           <TabsContent value="goal-planning" className="space-y-6 mt-6">
