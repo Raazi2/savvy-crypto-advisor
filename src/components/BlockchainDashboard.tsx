@@ -47,36 +47,58 @@ export const BlockchainDashboard = () => {
     functionName: '',
     parameters: ''
   });
+  const [transactions, setTransactions] = useState<BlockchainTransaction[]>([]);
+  const [contracts, setContracts] = useState<SmartContract[]>([]);
   const { toast } = useToast();
 
-  // Fetch blockchain transactions
-  const { data: transactions, refetch: refetchTransactions } = useQuery({
-    queryKey: ['blockchain-transactions'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('blockchain_transactions')
-        .select('*')
-        .order('created_at', { ascending: false });
+  // Fetch blockchain transactions using edge function
+  const fetchTransactions = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('cybersecurity-monitor', {
+        body: { action: 'get_audit_logs' }
+      });
       
       if (error) throw error;
-      return data as BlockchainTransaction[];
-    },
-  });
+      
+      // Filter for blockchain-related transactions and transform data
+      const blockchainTxs = data.auditLogs
+        ?.filter((log: any) => log.resource_type === 'blockchain_transaction')
+        ?.map((log: any) => ({
+          id: log.id,
+          transaction_type: log.action,
+          amount: log.details?.amount || 0,
+          asset_symbol: log.details?.asset_symbol || '',
+          status: 'confirmed',
+          created_at: log.created_at
+        })) || [];
+      
+      setTransactions(blockchainTxs);
+    } catch (error) {
+      console.error('Failed to fetch transactions:', error);
+      setTransactions([]);
+    }
+  };
 
-  // Fetch smart contracts
-  const { data: contracts } = useQuery({
-    queryKey: ['smart-contracts'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('smart_contracts')
-        .select('*')
-        .eq('is_active', true)
-        .order('deployed_at', { ascending: false });
+  // Fetch smart contracts using edge function
+  const fetchContracts = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke('smart-contract-manager', {
+        body: { action: 'get_contracts' }
+      });
       
       if (error) throw error;
-      return data as SmartContract[];
-    },
-  });
+      setContracts(data.contracts || []);
+    } catch (error) {
+      console.error('Failed to fetch contracts:', error);
+      setContracts([]);
+    }
+  };
+
+  // Load data on component mount
+  useEffect(() => {
+    fetchTransactions();
+    fetchContracts();
+  }, []);
 
   const handleBlockchainOperation = async (action: string, data: any) => {
     try {
@@ -92,7 +114,7 @@ export const BlockchainDashboard = () => {
       });
 
       if (action === 'record_transaction') {
-        refetchTransactions();
+        fetchTransactions();
         setNewTransaction({ type: 'trade', amount: '', asset_symbol: '', metadata: {} });
       }
     } catch (error: any) {
@@ -285,6 +307,11 @@ export const BlockchainDashboard = () => {
                     </div>
                   </div>
                 ))}
+                {transactions?.length === 0 && (
+                  <div className="text-center text-muted-foreground py-8">
+                    No transactions found. Record your first blockchain transaction above.
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -364,6 +391,11 @@ export const BlockchainDashboard = () => {
                     </div>
                   </div>
                 ))}
+                {contracts?.length === 0 && (
+                  <div className="text-center text-muted-foreground py-8">
+                    No smart contracts deployed yet. Deploy your first contract to see it here.
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
