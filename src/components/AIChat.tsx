@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Send, Bot, User, Settings, AlertCircle } from "lucide-react";
+import { Send, Bot, User, Settings, AlertCircle, Globe, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -17,14 +17,17 @@ interface Message {
 }
 
 const AI_MODELS = [
-  { id: 'mistralai/devstral-small:free', name: 'Devstral Small', provider: 'Free', description: '24B params, optimized for coding' },
-  { id: 'google/gemma-3n-4b:free', name: 'Gemma 3n 4B', provider: 'Free', description: 'Multimodal, mobile-optimized' },
-  { id: 'meta-llama/llama-3.3-8b-instruct:free', name: 'Llama 3.3 8B', provider: 'Free', description: 'Ultra-fast, lightweight' },
-  { id: 'nousresearch/deephermes-3-mistral-24b:free', name: 'DeepHermes 3 Mistral 24B', provider: 'Free', description: 'Deep reasoning mode' },
-  { id: 'microsoft/phi-4-reasoning-plus:free', name: 'Phi 4 Reasoning Plus', provider: 'Free', description: 'Enhanced math & code reasoning' },
-  { id: 'microsoft/phi-4-reasoning:free', name: 'Phi 4 Reasoning', provider: 'Free', description: 'Step-by-step logic' },
-  { id: 'opengvlab/internvl3-14b:free', name: 'InternVL3 14B', provider: 'Free', description: 'Multimodal, GUI agents' },
-  { id: 'opengvlab/internvl3-2b:free', name: 'InternVL3 2B', provider: 'Free', description: 'Fast inference, multimodal' },
+  { id: 'perplexity/llama-3.1-sonar-small-128k-online', name: 'Perplexity Sonar Small', provider: 'Live Data', description: 'Real-time web search & current data', hasInternet: true },
+  { id: 'perplexity/llama-3.1-sonar-large-128k-online', name: 'Perplexity Sonar Large', provider: 'Live Data', description: 'Advanced real-time analysis', hasInternet: true },
+  { id: 'perplexity/llama-3.1-sonar-huge-128k-online', name: 'Perplexity Sonar Huge', provider: 'Live Data', description: 'Most capable real-time model', hasInternet: true },
+  { id: 'mistralai/devstral-small:free', name: 'Devstral Small', provider: 'Free', description: '24B params, optimized for coding', hasInternet: false },
+  { id: 'google/gemma-3n-4b:free', name: 'Gemma 3n 4B', provider: 'Free', description: 'Multimodal, mobile-optimized', hasInternet: false },
+  { id: 'meta-llama/llama-3.3-8b-instruct:free', name: 'Llama 3.3 8B', provider: 'Free', description: 'Ultra-fast, lightweight', hasInternet: false },
+  { id: 'nousresearch/deephermes-3-mistral-24b:free', name: 'DeepHermes 3 Mistral 24B', provider: 'Free', description: 'Deep reasoning mode', hasInternet: false },
+  { id: 'microsoft/phi-4-reasoning-plus:free', name: 'Phi 4 Reasoning Plus', provider: 'Free', description: 'Enhanced math & code reasoning', hasInternet: false },
+  { id: 'microsoft/phi-4-reasoning:free', name: 'Phi 4 Reasoning', provider: 'Free', description: 'Step-by-step logic', hasInternet: false },
+  { id: 'opengvlab/internvl3-14b:free', name: 'InternVL3 14B', provider: 'Free', description: 'Multimodal, GUI agents', hasInternet: false },
+  { id: 'opengvlab/internvl3-2b:free', name: 'InternVL3 2B', provider: 'Free', description: 'Fast inference, multimodal', hasInternet: false },
 ];
 
 export const AIChat = () => {
@@ -32,12 +35,12 @@ export const AIChat = () => {
     {
       id: '1',
       role: 'assistant',
-      content: "Hello! I'm your AI financial advisor specialized in the Indian market. I can help you with investment strategies, Indian stock analysis, mutual funds, tax planning, and cybersecurity best practices. What would you like to discuss today?",
+      content: "Hello! I'm your AI financial advisor with access to real-time data. I can fetch live market information, current stock prices, latest news, and up-to-date financial data. What would you like to know about the current market situation?",
       timestamp: new Date(),
     }
   ]);
   const [input, setInput] = useState('');
-  const [selectedModel, setSelectedModel] = useState('mistralai/devstral-small:free');
+  const [selectedModel, setSelectedModel] = useState('perplexity/llama-3.1-sonar-small-128k-online');
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
@@ -56,13 +59,17 @@ export const AIChat = () => {
     setLoading(true);
 
     try {
+      const selectedModelData = AI_MODELS.find(m => m.id === selectedModel);
+      const isLiveDataModel = selectedModelData?.hasInternet;
+
       const { data, error } = await supabase.functions.invoke('ai-chat', {
         body: {
           messages: [...messages, userMessage].map(msg => ({
             role: msg.role,
             content: msg.content
           })),
-          model: selectedModel
+          model: selectedModel,
+          isLiveDataModel
         }
       });
 
@@ -74,11 +81,10 @@ export const AIChat = () => {
       if (data?.error) {
         console.error('AI function returned error:', data.error);
         
-        // Handle specific errors
         if (data.error.includes('credits exhausted') || data.error.includes('402')) {
           toast({
-            title: "OpenRouter Credits Exhausted",
-            description: "Please add credits at OpenRouter or try again later.",
+            title: "API Credits Exhausted",
+            description: "Please add credits or try a free model.",
             variant: "destructive",
           });
         } else if (data.error.includes('model') && data.error.includes('not')) {
@@ -87,7 +93,6 @@ export const AIChat = () => {
             description: "This AI model is not available. Trying a different model...",
             variant: "destructive",
           });
-          // Auto-switch to a different model
           const availableModels = AI_MODELS.filter(m => m.id !== selectedModel);
           if (availableModels.length > 0) {
             setSelectedModel(availableModels[0].id);
@@ -133,6 +138,8 @@ export const AIChat = () => {
     }
   };
 
+  const currentModel = AI_MODELS.find(m => m.id === selectedModel);
+
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Model Selection */}
@@ -141,6 +148,12 @@ export const AIChat = () => {
           <CardTitle className="flex items-center gap-2">
             <Settings className="w-5 h-5" />
             AI Model Selection
+            {currentModel?.hasInternet && (
+              <Badge className="bg-blue-500/20 text-blue-400 flex items-center gap-1">
+                <Globe className="w-3 h-3" />
+                Live Data
+              </Badge>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -155,7 +168,15 @@ export const AIChat = () => {
                     <div className="flex flex-col gap-1">
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{model.name}</span>
-                        <Badge variant="secondary" className="text-xs bg-green-500/20 text-green-400">
+                        <Badge 
+                          variant="secondary" 
+                          className={`text-xs ${
+                            model.hasInternet 
+                              ? 'bg-blue-500/20 text-blue-400' 
+                              : 'bg-green-500/20 text-green-400'
+                          }`}
+                        >
+                          {model.hasInternet && <Globe className="w-3 h-3 mr-1" />}
                           {model.provider}
                         </Badge>
                       </div>
@@ -165,20 +186,38 @@ export const AIChat = () => {
                 ))}
               </SelectContent>
             </Select>
-            <Badge className="bg-green-500/20 text-green-400">
-              {AI_MODELS.find(m => m.id === selectedModel)?.name} Active
+            <Badge className={`${
+              currentModel?.hasInternet 
+                ? 'bg-blue-500/20 text-blue-400' 
+                : 'bg-green-500/20 text-green-400'
+            }`}>
+              {currentModel?.name} Active
             </Badge>
           </div>
           
           <div className="mt-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
             <div className="flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
-              <div className="text-sm text-blue-300">
-                <p className="font-medium">Premium Free AI Models</p>
-                <p className="text-xs opacity-80 mt-1">
-                  These are high-quality models with specialized capabilities like coding, reasoning, and multimodal inputs - all completely free!
-                </p>
-              </div>
+              {currentModel?.hasInternet ? (
+                <>
+                  <TrendingUp className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-blue-300">
+                    <p className="font-medium">Live Data Model Active</p>
+                    <p className="text-xs opacity-80 mt-1">
+                      This model can access real-time information including current stock prices, latest news, market data, and live financial information.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <AlertCircle className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                  <div className="text-sm text-blue-300">
+                    <p className="font-medium">Offline Model</p>
+                    <p className="text-xs opacity-80 mt-1">
+                      This model provides analysis based on training data but cannot access live information. Switch to a "Live Data" model for current market data.
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </CardContent>
@@ -274,12 +313,17 @@ export const AIChat = () => {
 
       {/* Quick Prompts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {[
+        {currentModel?.hasInternet ? [
+          "What's the current price of Tesla stock?",
+          "Latest news about cryptocurrency market", 
+          "Current Indian stock market status",
+          "Today's top gainers in NSE"
+        ] : [
           "Best mutual funds for SIP in 2024?",
           "How to save tax under Section 80C?", 
           "Should I invest in crypto in India?",
-          "Top Indian stocks under ₹500?"
-        ].map((prompt, index) => (
+          "Investment strategies for beginners"
+        ]}.map((prompt, index) => (
           <Button
             key={index}
             variant="outline"

@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, model = 'nousresearch/nous-capybara-7b:free' } = await req.json();
+    const { messages, model = 'perplexity/llama-3.1-sonar-small-128k-online', isLiveDataModel = false } = await req.json();
     
     const openRouterKey = Deno.env.get('OPENROUTER_API_KEY');
     
@@ -31,7 +31,45 @@ serve(async (req) => {
       );
     }
 
-    console.log('AI Chat request:', { messageCount: messages.length, model });
+    console.log('AI Chat request:', { messageCount: messages.length, model, isLiveDataModel });
+
+    // Enhanced system prompt for live data models
+    const getSystemPrompt = (isLiveData: boolean) => {
+      if (isLiveData) {
+        return `You are a professional Indian financial advisor AI assistant with real-time data access. You specialize in:
+        - Live Indian stock market data (NSE, BSE) with current prices
+        - Real-time mutual fund NAVs and performance
+        - Current cryptocurrency prices and market trends
+        - Latest financial news and market updates
+        - Live market indices (Sensex, Nifty, etc.)
+        - Real-time currency exchange rates
+        - Current interest rates and bond yields
+        - Latest IPO information and market events
+        - Live commodity prices (gold, silver, crude oil)
+        - Current economic indicators and data
+        
+        IMPORTANT: Always fetch the most current and live data when answering questions about:
+        - Stock prices, market caps, and trading volumes
+        - Market trends and movements
+        - News and recent developments
+        - Economic events and announcements
+        - Regulatory changes and updates
+        
+        Provide accurate, up-to-date financial advice with current market context. When discussing prices or market data, always mention that the information is current as of the time of the query. Remind users that this is not personalized financial advice and they should consult a certified financial planner for major decisions.`;
+      } else {
+        return `You are a professional Indian financial advisor AI assistant. You specialize in:
+        - Indian stock market analysis (NSE, BSE)
+        - Mutual funds and SIPs
+        - Cryptocurrency in India
+        - Tax planning (Section 80C, ELSS, etc.)
+        - Investment strategies for Indian market
+        - Cybersecurity for financial accounts
+        
+        Always provide practical, India-specific financial advice. Mention relevant regulations like SEBI guidelines when appropriate. Be helpful but remind users that this is not personalized financial advice and they should consult a certified financial planner for major decisions.
+        
+        Note: You cannot access live data. For current market prices and real-time information, recommend switching to a live data model.`;
+      }
+    };
 
     const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
@@ -46,20 +84,12 @@ serve(async (req) => {
         messages: [
           {
             role: 'system',
-            content: `You are a professional Indian financial advisor AI assistant. You specialize in:
-            - Indian stock market (NSE, BSE)
-            - Mutual funds and SIPs
-            - Cryptocurrency in India
-            - Tax planning (Section 80C, ELSS, etc.)
-            - Investment strategies for Indian market
-            - Cybersecurity for financial accounts
-            
-            Always provide practical, India-specific financial advice. Mention relevant regulations like SEBI guidelines when appropriate. Be helpful but remind users that this is not personalized financial advice and they should consult a certified financial planner for major decisions.`
+            content: getSystemPrompt(isLiveDataModel)
           },
           ...messages
         ],
-        temperature: 0.7,
-        max_tokens: 1000
+        temperature: isLiveDataModel ? 0.3 : 0.7, // Lower temperature for live data accuracy
+        max_tokens: isLiveDataModel ? 1500 : 1000 // More tokens for comprehensive live data responses
       }),
     });
 
