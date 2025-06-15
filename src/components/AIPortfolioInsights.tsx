@@ -111,6 +111,24 @@ export const AIPortfolioInsights = () => {
     );
   }
 
+  // Safe access to analysis data with fallbacks
+  const safeAnalysis = {
+    analysis: analysis?.analysis || '',
+    riskScore: analysis?.riskScore ?? 0,
+    diversificationScore: analysis?.diversificationScore ?? 0,
+    recommendations: Array.isArray(analysis?.recommendations) ? analysis.recommendations : [],
+    predictions: {
+      shortTerm: analysis?.predictions?.shortTerm || '',
+      longTerm: analysis?.predictions?.longTerm || ''
+    },
+    rebalanceAdvice: Array.isArray(analysis?.rebalanceAdvice) ? analysis.rebalanceAdvice : [],
+    metrics: {
+      assetTypeCount: analysis?.metrics?.assetTypeCount ?? 0,
+      concentrationRisk: analysis?.metrics?.concentrationRisk ?? 0,
+      holdingsCount: analysis?.metrics?.holdingsCount ?? 0
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* AI Analysis Overview */}
@@ -132,7 +150,7 @@ export const AIPortfolioInsights = () => {
         </CardHeader>
         <CardContent>
           <div className="prose max-w-none">
-            <p className="text-gray-700 dark:text-gray-300">{analysis.analysis}</p>
+            <p className="text-gray-700 dark:text-gray-300">{safeAnalysis.analysis}</p>
           </div>
         </CardContent>
       </Card>
@@ -151,23 +169,23 @@ export const AIPortfolioInsights = () => {
               <div>
                 <div className="flex justify-between mb-2">
                   <span>Risk Score</span>
-                  <span className={`font-bold ${getRiskColor(analysis.riskScore)}`}>
-                    {analysis.riskScore}/100
+                  <span className={`font-bold ${getRiskColor(safeAnalysis.riskScore)}`}>
+                    {safeAnalysis.riskScore}/100
                   </span>
                 </div>
-                <Progress value={analysis.riskScore} className="h-2" />
-                <p className={`text-sm mt-1 ${getRiskColor(analysis.riskScore)}`}>
-                  {getRiskLabel(analysis.riskScore)}
+                <Progress value={safeAnalysis.riskScore} className="h-2" />
+                <p className={`text-sm mt-1 ${getRiskColor(safeAnalysis.riskScore)}`}>
+                  {getRiskLabel(safeAnalysis.riskScore)}
                 </p>
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-gray-600">Holdings</p>
-                  <p className="font-bold">{analysis.metrics.holdingsCount}</p>
+                  <p className="font-bold">{safeAnalysis.metrics.holdingsCount}</p>
                 </div>
                 <div>
                   <p className="text-gray-600">Concentration Risk</p>
-                  <p className="font-bold">{analysis.metrics.concentrationRisk.toFixed(1)}%</p>
+                  <p className="font-bold">{safeAnalysis.metrics.concentrationRisk.toFixed(1)}%</p>
                 </div>
               </div>
             </div>
@@ -187,20 +205,20 @@ export const AIPortfolioInsights = () => {
                 <div className="flex justify-between mb-2">
                   <span>Diversification Score</span>
                   <span className="font-bold text-blue-600">
-                    {analysis.diversificationScore}/100
+                    {safeAnalysis.diversificationScore}/100
                   </span>
                 </div>
-                <Progress value={analysis.diversificationScore} className="h-2" />
+                <Progress value={safeAnalysis.diversificationScore} className="h-2" />
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-gray-600">Asset Types</p>
-                  <p className="font-bold">{analysis.metrics.assetTypeCount}</p>
+                  <p className="font-bold">{safeAnalysis.metrics.assetTypeCount}</p>
                 </div>
                 <div>
                   <p className="text-gray-600">Status</p>
-                  <Badge variant={analysis.diversificationScore > 70 ? "default" : "secondary"}>
-                    {analysis.diversificationScore > 70 ? "Well Diversified" : "Needs Improvement"}
+                  <Badge variant={safeAnalysis.diversificationScore > 70 ? "default" : "secondary"}>
+                    {safeAnalysis.diversificationScore > 70 ? "Well Diversified" : "Needs Improvement"}
                   </Badge>
                 </div>
               </div>
@@ -221,11 +239,11 @@ export const AIPortfolioInsights = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <h4 className="font-semibold mb-2">Short-term Outlook (1-3 months)</h4>
-              <p className="text-gray-700 dark:text-gray-300">{analysis.predictions.shortTerm}</p>
+              <p className="text-gray-700 dark:text-gray-300">{safeAnalysis.predictions.shortTerm}</p>
             </div>
             <div>
               <h4 className="font-semibold mb-2">Long-term Outlook (1+ years)</h4>
-              <p className="text-gray-700 dark:text-gray-300">{analysis.predictions.longTerm}</p>
+              <p className="text-gray-700 dark:text-gray-300">{safeAnalysis.predictions.longTerm}</p>
             </div>
           </div>
         </CardContent>
@@ -241,7 +259,7 @@ export const AIPortfolioInsights = () => {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {analysis.recommendations.map((recommendation, index) => (
+            {safeAnalysis.recommendations.map((recommendation, index) => (
               <div key={index} className="flex items-start space-x-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                 <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
                 <p className="text-sm">{recommendation}</p>
@@ -252,14 +270,14 @@ export const AIPortfolioInsights = () => {
       </Card>
 
       {/* Rebalancing Advice */}
-      {analysis.rebalanceAdvice.length > 0 && (
+      {safeAnalysis.rebalanceAdvice.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>Portfolio Rebalancing</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {analysis.rebalanceAdvice.map((advice, index) => (
+              {safeAnalysis.rebalanceAdvice.map((advice, index) => (
                 <div key={index} className="flex items-start space-x-2 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
                   <div className="w-2 h-2 bg-green-500 rounded-full mt-2 flex-shrink-0"></div>
                   <p className="text-sm">{advice}</p>
