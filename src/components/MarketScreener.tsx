@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
 import { 
   Search, 
   Filter, 
@@ -19,17 +19,25 @@ import {
   Activity,
   DollarSign
 } from "lucide-react";
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface Stock {
   symbol: string;
   name: string;
-  sector: string;
   price: number;
   change: number;
+  changePercent: number;
   volume: number;
   marketCap: number;
-  pe: number;
-  rsi: number;
+  volatility: number;
+  sentimentScore: number;
+  technicalIndicators: {
+    rsi: number;
+    macd: number;
+    sma_20: number;
+    sma_50: number;
+  };
 }
 
 interface FilterState {
@@ -38,164 +46,102 @@ interface FilterState {
   priceMax: number;
   marketCap: string;
   volume: number;
-  peMin: number;
-  peMax: number;
+  changeMin: number;
+  changeMax: number;
+  rsiMin: number;
+  rsiMax: number;
 }
 
-const MOCK_STOCKS: Stock[] = [
-  {
-    symbol: "AAPL",
-    name: "Apple Inc.",
-    sector: "Technology",
-    price: 175.96,
-    change: 0.34,
-    volume: 56478923,
-    marketCap: 2820000000000,
-    pe: 28.26,
-    rsi: 62.5
-  },
-  {
-    symbol: "MSFT",
-    name: "Microsoft Corp.",
-    sector: "Technology",
-    price: 429.26,
-    change: 0.87,
-    volume: 30456789,
-    marketCap: 3190000000000,
-    pe: 38.45,
-    rsi: 70.1
-  },
-  {
-    symbol: "GOOGL",
-    name: "Alphabet Inc.",
-    sector: "Technology",
-    price: 178.44,
-    change: -0.12,
-    volume: 23987654,
-    marketCap: 1870000000000,
-    pe: 25.67,
-    rsi: 58.9
-  },
-  {
-    symbol: "AMZN",
-    name: "Amazon.com Inc.",
-    sector: "Consumer",
-    price: 185.25,
-    change: 1.23,
-    volume: 41234567,
-    marketCap: 1900000000000,
-    pe: 95.23,
-    rsi: 65.4
-  },
-  {
-    symbol: "TSLA",
-    name: "Tesla Inc.",
-    sector: "Consumer",
-    price: 256.78,
-    change: -2.34,
-    volume: 45678901,
-    marketCap: 810000000000,
-    pe: 67.89,
-    rsi: 45.6
-  },
-  {
-    symbol: "JPM",
-    name: "JPMorgan Chase & Co.",
-    sector: "Finance",
-    price: 198.54,
-    change: 0.56,
-    volume: 15678902,
-    marketCap: 480000000000,
-    pe: 12.45,
-    rsi: 55.2
-  },
-  {
-    symbol: "JNJ",
-    name: "Johnson & Johnson",
-    sector: "Healthcare",
-    price: 165.23,
-    change: 0.23,
-    volume: 7890123,
-    marketCap: 430000000000,
-    pe: 27.89,
-    rsi: 48.9
-  },
-  {
-    symbol: "V",
-    name: "Visa Inc.",
-    sector: "Finance",
-    price: 275.87,
-    change: 0.78,
-    volume: 8901234,
-    marketCap: 570000000000,
-    pe: 40.56,
-    rsi: 61.3
-  },
-  {
-    symbol: "UNH",
-    name: "UnitedHealth Group",
-    sector: "Healthcare",
-    price: 523.45,
-    change: -0.45,
-    volume: 4561234,
-    marketCap: 490000000000,
-    pe: 22.34,
-    rsi: 52.7
-  },
-  {
-    symbol: "XOM",
-    name: "Exxon Mobil Corp.",
-    sector: "Energy",
-    price: 112.34,
-    change: 1.02,
-    volume: 12345678,
-    marketCap: 460000000000,
-    pe: 14.78,
-    rsi: 59.1
-  }
-];
-
 export const MarketScreener = () => {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
-  const [stocks, setStocks] = useState(MOCK_STOCKS);
-  const [filteredStocks, setFilteredStocks] = useState(MOCK_STOCKS);
+  const [stocks, setStocks] = useState<Stock[]>([]);
+  const [filteredStocks, setFilteredStocks] = useState<Stock[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [filters, setFilters] = useState<FilterState>({
     sector: "all",
     priceMin: 0,
-    priceMax: 1000,
+    priceMax: 10000,
     marketCap: "all",
     volume: 0,
-    peMin: 0,
-    peMax: 100,
+    changeMin: -100,
+    changeMax: 100,
+    rsiMin: 0,
+    rsiMax: 100,
   });
-  const [sortBy, setSortBy] = useState<string>("price");
+  const [sortBy, setSortBy] = useState<string>("changePercent");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  const fetchMarketData = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase.functions.invoke('realtime-market-data', {
+        body: { 
+          symbols: ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'NVDA', 'META', 'NFLX', 'JPM', 'V', 'UNH', 'JNJ', 'XOM', 'BAC', 'PG', 'HD', 'CVX', 'ABBV', 'PFE', 'KO'], 
+          includeOptions: false 
+        }
+      });
+
+      if (error) throw error;
+
+      const stockData: Stock[] = data.stocks.map((stock: any) => ({
+        symbol: stock.symbol,
+        name: stock.name,
+        price: stock.price,
+        change: stock.change,
+        changePercent: stock.changePercent,
+        volume: stock.volume,
+        marketCap: stock.marketCap,
+        volatility: stock.volatility,
+        sentimentScore: stock.sentimentScore,
+        technicalIndicators: stock.technicalIndicators
+      }));
+
+      setStocks(stockData);
+      setLastUpdate(new Date());
+    } catch (error) {
+      console.error('Error fetching market data:', error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch real-time market data",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMarketData();
+    // Auto-refresh every 30 seconds
+    const interval = setInterval(fetchMarketData, 30000);
+    return () => clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     applyFilters();
-  }, [sortBy]);
+  }, [stocks, searchTerm, filters, sortBy, sortOrder]);
 
   const applyFilters = () => {
-    let newFilteredStocks = [...stocks];
+    let filtered = [...stocks];
 
+    // Search filter
     if (searchTerm) {
-      newFilteredStocks = newFilteredStocks.filter((stock) =>
+      filtered = filtered.filter((stock) =>
         stock.symbol.toLowerCase().includes(searchTerm.toLowerCase()) ||
         stock.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
-    if (filters.sector !== "all") {
-      newFilteredStocks = newFilteredStocks.filter(
-        (stock) => stock.sector === filters.sector
-      );
-    }
-
-    newFilteredStocks = newFilteredStocks.filter(
+    // Price filter
+    filtered = filtered.filter(
       (stock) => stock.price >= filters.priceMin && stock.price <= filters.priceMax
     );
 
+    // Market Cap filter
     if (filters.marketCap !== "all") {
-      newFilteredStocks = newFilteredStocks.filter((stock) => {
+      filtered = filtered.filter((stock) => {
         if (filters.marketCap === "large") {
           return stock.marketCap > 10000000000;
         } else if (filters.marketCap === "mid") {
@@ -206,40 +152,103 @@ export const MarketScreener = () => {
       });
     }
 
-    newFilteredStocks = newFilteredStocks.filter((stock) => stock.volume >= filters.volume);
+    // Volume filter
+    filtered = filtered.filter((stock) => stock.volume >= filters.volume);
 
-    newFilteredStocks = newFilteredStocks.filter(
-      (stock) => stock.pe >= filters.peMin && stock.pe <= filters.peMax
+    // Change % filter
+    filtered = filtered.filter(
+      (stock) => stock.changePercent >= filters.changeMin && stock.changePercent <= filters.changeMax
     );
 
-    // Sorting logic
-    if (sortBy === "price") {
-      newFilteredStocks.sort((a, b) => a.price - b.price);
-    } else if (sortBy === "change") {
-      newFilteredStocks.sort((a, b) => b.change - a.change);
-    } else if (sortBy === "volume") {
-      newFilteredStocks.sort((a, b) => b.volume - a.volume);
-    } else if (sortBy === "marketCap") {
-      newFilteredStocks.sort((a, b) => b.marketCap - a.marketCap);
-    }
+    // RSI filter
+    filtered = filtered.filter(
+      (stock) => stock.technicalIndicators.rsi >= filters.rsiMin && stock.technicalIndicators.rsi <= filters.rsiMax
+    );
 
-    setFilteredStocks(newFilteredStocks);
+    // Sorting
+    filtered.sort((a, b) => {
+      let aValue: number, bValue: number;
+      
+      switch (sortBy) {
+        case "price":
+          aValue = a.price;
+          bValue = b.price;
+          break;
+        case "changePercent":
+          aValue = a.changePercent;
+          bValue = b.changePercent;
+          break;
+        case "volume":
+          aValue = a.volume;
+          bValue = b.volume;
+          break;
+        case "marketCap":
+          aValue = a.marketCap;
+          bValue = b.marketCap;
+          break;
+        case "rsi":
+          aValue = a.technicalIndicators.rsi;
+          bValue = b.technicalIndicators.rsi;
+          break;
+        case "volatility":
+          aValue = a.volatility;
+          bValue = b.volatility;
+          break;
+        default:
+          aValue = a.changePercent;
+          bValue = b.changePercent;
+      }
+      
+      return sortOrder === "asc" ? aValue - bValue : bValue - aValue;
+    });
+
+    setFilteredStocks(filtered);
   };
 
-  const handleRefresh = () => {
-    setFilteredStocks(MOCK_STOCKS);
+  const resetFilters = () => {
     setFilters({
       sector: "all",
       priceMin: 0,
-      priceMax: 1000,
+      priceMax: 10000,
       marketCap: "all",
       volume: 0,
-      peMin: 0,
-      peMax: 100,
+      changeMin: -100,
+      changeMax: 100,
+      rsiMin: 0,
+      rsiMax: 100,
     });
     setSearchTerm("");
-    setSortBy("price");
+    setSortBy("changePercent");
+    setSortOrder("desc");
   };
+
+  const getSentimentColor = (score: number) => {
+    if (score > 70) return 'text-green-600';
+    if (score > 40) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
+  const getSentimentLabel = (score: number) => {
+    if (score > 70) return 'Bullish';
+    if (score > 40) return 'Neutral';
+    return 'Bearish';
+  };
+
+  if (loading && stocks.length === 0) {
+    return (
+      <div className="max-w-7xl mx-auto space-y-6">
+        <Card className="backdrop-blur-xl bg-white/10 border border-white/20">
+          <CardContent className="p-12 text-center">
+            <div className="animate-pulse">
+              <div className="h-8 bg-gray-200 rounded w-3/4 mb-4 mx-auto"></div>
+              <div className="h-4 bg-gray-200 rounded w-1/2 mb-4 mx-auto"></div>
+              <div className="h-20 bg-gray-200 rounded"></div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto space-y-6">
@@ -247,15 +256,19 @@ export const MarketScreener = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold text-white mb-2">Market Screener</h1>
-          <p className="text-slate-400">Advanced screening tools for stocks and cryptocurrencies</p>
+          <p className="text-slate-400">Live market data with advanced screening tools</p>
+          {lastUpdate && (
+            <p className="text-sm text-slate-500 mt-1">
+              Last updated: {lastUpdate.toLocaleTimeString()}
+            </p>
+          )}
         </div>
         <div className="flex items-center space-x-3">
-          <Button variant="outline" className="bg-white/5 border-white/20">
-            <Save className="w-4 h-4 mr-2" />
-            Save Screen
+          <Button variant="outline" className="bg-white/5 border-white/20" onClick={resetFilters}>
+            Reset Filters
           </Button>
-          <Button onClick={handleRefresh} variant="outline" className="bg-white/5 border-white/20">
-            <RefreshCw className="w-4 h-4 mr-2" />
+          <Button onClick={fetchMarketData} disabled={loading} variant="outline" className="bg-white/5 border-white/20">
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
         </div>
@@ -292,24 +305,6 @@ export const MarketScreener = () => {
                   </div>
                 </div>
 
-                {/* Sector Filter */}
-                <div className="space-y-2">
-                  <Label className="text-slate-300">Sector</Label>
-                  <Select value={filters.sector} onValueChange={(value) => setFilters({...filters, sector: value})}>
-                    <SelectTrigger className="bg-white/5 border-white/20">
-                      <SelectValue placeholder="All Sectors" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All Sectors</SelectItem>
-                      <SelectItem value="technology">Technology</SelectItem>
-                      <SelectItem value="healthcare">Healthcare</SelectItem>
-                      <SelectItem value="finance">Finance</SelectItem>
-                      <SelectItem value="energy">Energy</SelectItem>
-                      <SelectItem value="consumer">Consumer</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
                 {/* Price Range */}
                 <div className="space-y-2">
                   <Label className="text-slate-300">Price Range ($)</Label>
@@ -326,6 +321,27 @@ export const MarketScreener = () => {
                       type="number"
                       value={filters.priceMax}
                       onChange={(e) => setFilters({...filters, priceMax: Number(e.target.value)})}
+                      className="bg-white/5 border-white/20"
+                    />
+                  </div>
+                </div>
+
+                {/* Change % Range */}
+                <div className="space-y-2">
+                  <Label className="text-slate-300">Change % Range</Label>
+                  <div className="flex space-x-2">
+                    <Input
+                      placeholder="Min %"
+                      type="number"
+                      value={filters.changeMin}
+                      onChange={(e) => setFilters({...filters, changeMin: Number(e.target.value)})}
+                      className="bg-white/5 border-white/20"
+                    />
+                    <Input
+                      placeholder="Max %"
+                      type="number"
+                      value={filters.changeMax}
+                      onChange={(e) => setFilters({...filters, changeMax: Number(e.target.value)})}
                       className="bg-white/5 border-white/20"
                     />
                   </div>
@@ -359,30 +375,26 @@ export const MarketScreener = () => {
                   />
                 </div>
 
-                {/* P/E Ratio */}
+                {/* RSI Range */}
                 <div className="space-y-2">
-                  <Label className="text-slate-300">P/E Ratio Range</Label>
+                  <Label className="text-slate-300">RSI Range</Label>
                   <div className="flex space-x-2">
                     <Input
                       placeholder="Min"
                       type="number"
-                      value={filters.peMin}
-                      onChange={(e) => setFilters({...filters, peMin: Number(e.target.value)})}
+                      value={filters.rsiMin}
+                      onChange={(e) => setFilters({...filters, rsiMin: Number(e.target.value)})}
                       className="bg-white/5 border-white/20"
                     />
                     <Input
                       placeholder="Max"
                       type="number"
-                      value={filters.peMax}
-                      onChange={(e) => setFilters({...filters, peMax: Number(e.target.value)})}
+                      value={filters.rsiMax}
+                      onChange={(e) => setFilters({...filters, rsiMax: Number(e.target.value)})}
                       className="bg-white/5 border-white/20"
                     />
                   </div>
                 </div>
-
-                <Button onClick={applyFilters} className="w-full bg-blue-600 hover:bg-blue-700">
-                  Apply Filters
-                </Button>
               </CardContent>
             </Card>
 
@@ -397,7 +409,7 @@ export const MarketScreener = () => {
                         {filteredStocks.length} stocks found
                       </h3>
                       <p className="text-sm text-slate-400">
-                        Showing results based on your criteria
+                        Real-time data from live market feeds
                       </p>
                     </div>
                     <div className="flex items-center space-x-2">
@@ -407,12 +419,22 @@ export const MarketScreener = () => {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="changePercent">% Change</SelectItem>
                           <SelectItem value="price">Price</SelectItem>
-                          <SelectItem value="change">% Change</SelectItem>
                           <SelectItem value="volume">Volume</SelectItem>
                           <SelectItem value="marketCap">Market Cap</SelectItem>
+                          <SelectItem value="rsi">RSI</SelectItem>
+                          <SelectItem value="volatility">Volatility</SelectItem>
                         </SelectContent>
                       </Select>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                        className="bg-white/5 border-white/20"
+                      >
+                        {sortOrder === "asc" ? "↑" : "↓"}
+                      </Button>
                     </div>
                   </div>
                 </CardContent>
@@ -433,9 +455,6 @@ export const MarketScreener = () => {
                           <div>
                             <h3 className="font-semibold text-white">{stock.symbol}</h3>
                             <p className="text-sm text-slate-400">{stock.name}</p>
-                            <Badge variant="outline" className="mt-1 text-xs">
-                              {stock.sector}
-                            </Badge>
                           </div>
                         </div>
 
@@ -444,22 +463,29 @@ export const MarketScreener = () => {
                             ${stock.price.toFixed(2)}
                           </p>
                           <div className={`flex items-center space-x-1 ${
-                            stock.change >= 0 ? 'text-green-400' : 'text-red-400'
+                            stock.changePercent >= 0 ? 'text-green-400' : 'text-red-400'
                           }`}>
-                            {stock.change >= 0 ? 
+                            {stock.changePercent >= 0 ? 
                               <TrendingUp className="w-4 h-4" /> : 
                               <TrendingDown className="w-4 h-4" />
                             }
                             <span className="font-medium">
-                              {stock.change >= 0 ? '+' : ''}{stock.change.toFixed(2)}%
+                              {stock.changePercent >= 0 ? '+' : ''}{stock.changePercent.toFixed(2)}%
                             </span>
                           </div>
                         </div>
 
-                        <div className="text-right text-sm text-slate-400">
-                          <p>Volume: {(stock.volume / 1000000).toFixed(1)}M</p>
-                          <p>P/E: {stock.pe.toFixed(1)}</p>
-                          <p>RSI: {stock.rsi.toFixed(1)}</p>
+                        <div className="text-right text-sm text-slate-400 space-y-1">
+                          <p>Vol: {(stock.volume / 1000000).toFixed(1)}M</p>
+                          <p>RSI: {stock.technicalIndicators.rsi.toFixed(1)}</p>
+                          <p>Vol: {stock.volatility.toFixed(1)}%</p>
+                        </div>
+
+                        <div className="text-center">
+                          <p className="text-sm text-slate-400 mb-1">Sentiment</p>
+                          <Badge variant="outline" className={getSentimentColor(stock.sentimentScore)}>
+                            {getSentimentLabel(stock.sentimentScore)}
+                          </Badge>
                         </div>
 
                         <div className="flex items-center space-x-2">
@@ -475,6 +501,19 @@ export const MarketScreener = () => {
                   </Card>
                 ))}
               </div>
+
+              {filteredStocks.length === 0 && !loading && (
+                <Card className="backdrop-blur-xl bg-white/10 border border-white/20">
+                  <CardContent className="p-12 text-center">
+                    <Activity className="w-16 h-16 text-slate-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-white mb-2">No stocks match your criteria</h3>
+                    <p className="text-slate-400 mb-4">Try adjusting your filters to see more results</p>
+                    <Button onClick={resetFilters} variant="outline" className="bg-white/5 border-white/20">
+                      Reset Filters
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         </TabsContent>
