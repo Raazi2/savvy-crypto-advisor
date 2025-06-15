@@ -313,7 +313,7 @@ export const AIChat = () => {
 
       {/* Quick Prompts */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {currentModel?.hasInternet ? [
+        {(currentModel?.hasInternet ? [
           "What's the current price of Tesla stock?",
           "Latest news about cryptocurrency market", 
           "Current Indian stock market status",
@@ -323,7 +323,7 @@ export const AIChat = () => {
           "How to save tax under Section 80C?", 
           "Should I invest in crypto in India?",
           "Investment strategies for beginners"
-        ]}.map((prompt, index) => (
+        ]).map((prompt, index) => (
           <Button
             key={index}
             variant="outline"
