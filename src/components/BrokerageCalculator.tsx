@@ -163,16 +163,27 @@ interface CalculationResult {
   netAmount: number;
 }
 
-export const BrokerageCalculator = () => {
+interface BrokerageCalculatorProps {
+  symbol: string;
+  currentPrice: number;
+  assetType: 'stock' | 'crypto';
+}
+
+export const BrokerageCalculator: React.FC<BrokerageCalculatorProps> = ({ symbol, currentPrice, assetType }) => {
   const { openBrokerApp } = useBrokerDeepLink();
   const [tradeDetails, setTradeDetails] = useState({
     tradeType: 'delivery',
     quantity: '',
-    price: '',
+    price: currentPrice.toString(),
     selectedBroker: 'zerodha'
   });
   const [calculations, setCalculations] = useState<Record<string, CalculationResult>>({});
   const [bestBroker, setBestBroker] = useState<string>('');
+
+  // Update price when currentPrice prop changes
+  useEffect(() => {
+    setTradeDetails(prev => ({ ...prev, price: currentPrice.toString() }));
+  }, [currentPrice]);
 
   useEffect(() => {
     if (tradeDetails.quantity && tradeDetails.price) {
@@ -196,13 +207,13 @@ export const BrokerageCalculator = () => {
       brokerage = broker.minimumBrokerage.options;
     }
 
-    // Calculate other charges
-    const stt = (turnover * broker.charges.stt) / 100;
-    const transactionCharges = (turnover * broker.charges.transactionCharges) / 100;
-    const sebiCharges = (turnover * broker.charges.sebiCharges) / 10000000; // per crore
+    // Calculate other charges (only for stocks, not crypto)
+    const stt = assetType === 'stock' ? (turnover * broker.charges.stt) / 100 : 0;
+    const transactionCharges = assetType === 'stock' ? (turnover * broker.charges.transactionCharges) / 100 : 0;
+    const sebiCharges = assetType === 'stock' ? (turnover * broker.charges.sebiCharges) / 10000000 : 0; // per crore
     const gstOnBrokerage = (brokerage * broker.charges.gst) / 100;
     const gstOnCharges = (transactionCharges * broker.charges.gst) / 100;
-    const dpCharges = tradeType === 'delivery' ? broker.charges.dpCharges : 0;
+    const dpCharges = (tradeType === 'delivery' && assetType === 'stock') ? broker.charges.dpCharges : 0;
 
     const totalCharges = brokerage + stt + transactionCharges + sebiCharges + gstOnBrokerage + gstOnCharges + dpCharges;
     const netAmount = turnover - totalCharges;
@@ -253,7 +264,7 @@ export const BrokerageCalculator = () => {
 
   const handleOpenBroker = (brokerId: string) => {
     const stock = {
-      symbol: 'DEMO',
+      symbol: symbol,
       price: parseFloat(tradeDetails.price || '0'),
     };
     
@@ -269,10 +280,10 @@ export const BrokerageCalculator = () => {
         <CardHeader>
           <CardTitle className="flex items-center">
             <Calculator className="w-5 h-5 mr-2" />
-            Real-time Brokerage Calculator
+            {assetType === 'crypto' ? 'Crypto Trading' : 'Brokerage'} Calculator - {symbol}
           </CardTitle>
           <CardDescription>
-            Compare exact trading costs across different brokers
+            Compare exact trading costs across different {assetType === 'crypto' ? 'crypto exchanges' : 'brokers'}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -286,9 +297,9 @@ export const BrokerageCalculator = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="delivery">Delivery</SelectItem>
-                  <SelectItem value="intraday">Intraday</SelectItem>
-                  <SelectItem value="options">Options</SelectItem>
+                  <SelectItem value="delivery">{assetType === 'crypto' ? 'Spot' : 'Delivery'}</SelectItem>
+                  <SelectItem value="intraday">{assetType === 'crypto' ? 'Margin' : 'Intraday'}</SelectItem>
+                  {assetType === 'stock' && <SelectItem value="options">Options</SelectItem>}
                 </SelectContent>
               </Select>
             </div>
@@ -304,7 +315,7 @@ export const BrokerageCalculator = () => {
             </div>
 
             <div>
-              <Label htmlFor="price">Price per Share (₹)</Label>
+              <Label htmlFor="price">Price per {assetType === 'crypto' ? 'Coin' : 'Share'} ({assetType === 'crypto' ? '$' : '₹'})</Label>
               <Input
                 type="number"
                 step="0.01"
@@ -328,11 +339,11 @@ export const BrokerageCalculator = () => {
                 <div className="p-4 border rounded-lg">
                   <div className="text-sm text-gray-600">Total Investment</div>
                   <div className="text-2xl font-bold">
-                    {formatCurrency(parseInt(tradeDetails.quantity || '0') * parseFloat(tradeDetails.price || '0'))}
+                    {assetType === 'crypto' ? '$' : '₹'}{(parseInt(tradeDetails.quantity || '0') * parseFloat(tradeDetails.price || '0')).toFixed(2)}
                   </div>
                 </div>
                 <div className="p-4 border rounded-lg">
-                  <div className="text-sm text-gray-600">Best Broker</div>
+                  <div className="text-sm text-gray-600">Best {assetType === 'crypto' ? 'Exchange' : 'Broker'}</div>
                   <div className="text-lg font-bold flex items-center">
                     <Award className="w-4 h-4 mr-2 text-yellow-500" />
                     {BROKER_CHARGES.find(b => b.id === bestBroker)?.name}
@@ -359,11 +370,15 @@ export const BrokerageCalculator = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Broker</TableHead>
+                      <TableHead>{assetType === 'crypto' ? 'Exchange' : 'Broker'}</TableHead>
                       <TableHead>Brokerage</TableHead>
-                      <TableHead>STT</TableHead>
-                      <TableHead>Transaction Charges</TableHead>
-                      <TableHead>DP Charges</TableHead>
+                      {assetType === 'stock' && (
+                        <>
+                          <TableHead>STT</TableHead>
+                          <TableHead>Transaction Charges</TableHead>
+                          <TableHead>DP Charges</TableHead>
+                        </>
+                      )}
                       <TableHead>Total Charges</TableHead>
                       <TableHead>Net Amount</TableHead>
                       <TableHead>Action</TableHead>
@@ -390,9 +405,13 @@ export const BrokerageCalculator = () => {
                             </div>
                           </TableCell>
                           <TableCell>{formatCurrency(calc.brokerage)}</TableCell>
-                          <TableCell>{formatCurrency(calc.stt)}</TableCell>
-                          <TableCell>{formatCurrency(calc.transactionCharges)}</TableCell>
-                          <TableCell>{formatCurrency(calc.dpCharges)}</TableCell>
+                          {assetType === 'stock' && (
+                            <>
+                              <TableCell>{formatCurrency(calc.stt)}</TableCell>
+                              <TableCell>{formatCurrency(calc.transactionCharges)}</TableCell>
+                              <TableCell>{formatCurrency(calc.dpCharges)}</TableCell>
+                            </>
+                          )}
                           <TableCell className="font-bold">
                             {formatCurrency(calc.totalCharges)}
                           </TableCell>

@@ -1,190 +1,94 @@
 
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { AlertTriangle, Bell, BellOff, Plus, Trash2, TrendingUp, TrendingDown } from 'lucide-react';
+import { Bell, Plus, Trash2, TrendingUp, TrendingDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useSettings } from '@/hooks/useSettings';
-import { notificationService } from '@/services/notificationService';
 
 interface PriceAlert {
   id: string;
   symbol: string;
-  companyName: string;
-  alertType: 'above' | 'below' | 'change';
+  assetName: string;
   targetPrice: number;
+  condition: 'above' | 'below';
   currentPrice: number;
-  changePercent?: number;
   isActive: boolean;
-  createdAt: string;
-  triggeredAt?: string;
-}
-
-interface NewAlertForm {
-  symbol: string;
-  alertType: 'above' | 'below' | 'change';
-  targetPrice: string;
-  changePercent: string;
+  createdAt: Date;
 }
 
 interface PriceAlertsProps {
-  availableStocks: Array<{
-    symbol: string;
-    name: string;
-    price: number;
-  }>;
+  symbol: string;
+  currentPrice: number;
+  assetName: string;
 }
 
-export const PriceAlerts: React.FC<PriceAlertsProps> = ({ availableStocks }) => {
+export const PriceAlerts: React.FC<PriceAlertsProps> = ({ symbol, currentPrice, assetName }) => {
   const { toast } = useToast();
-  const { settings } = useSettings();
   const [alerts, setAlerts] = useState<PriceAlert[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [newAlert, setNewAlert] = useState<NewAlertForm>({
-    symbol: '',
-    alertType: 'above',
+  const [newAlert, setNewAlert] = useState({
     targetPrice: '',
-    changePercent: ''
+    condition: 'above' as 'above' | 'below'
   });
 
+  // Load existing alerts on component mount
   useEffect(() => {
-    // Load existing alerts from localStorage
     loadAlerts();
-    
-    // Set up notification service
-    notificationService.setSettings(settings);
-    
-    // Request notification permission
-    notificationService.requestPermission();
-    
-    // Check alerts every 30 seconds
-    const interval = setInterval(checkAlerts, 30000);
-    return () => clearInterval(interval);
-  }, [settings]);
+  }, [symbol]);
 
   const loadAlerts = () => {
-    const stored = localStorage.getItem('priceAlerts');
-    if (stored) {
-      try {
-        setAlerts(JSON.parse(stored));
-      } catch (error) {
-        console.error('Error loading alerts:', error);
-      }
+    // In a real app, this would load from API/database
+    const savedAlerts = localStorage.getItem(`price-alerts-${symbol}`);
+    if (savedAlerts) {
+      setAlerts(JSON.parse(savedAlerts));
     }
   };
 
-  const saveAlerts = (alertsToSave: PriceAlert[]) => {
-    localStorage.setItem('priceAlerts', JSON.stringify(alertsToSave));
-    setAlerts(alertsToSave);
-  };
-
-  const checkAlerts = () => {
-    setAlerts(currentAlerts => {
-      const updatedAlerts = currentAlerts.map(alert => {
-        if (!alert.isActive || alert.triggeredAt) return alert;
-
-        const stock = availableStocks.find(s => s.symbol === alert.symbol);
-        if (!stock) return alert;
-
-        let shouldTrigger = false;
-        const currentPrice = stock.price;
-
-        switch (alert.alertType) {
-          case 'above':
-            shouldTrigger = currentPrice >= alert.targetPrice;
-            break;
-          case 'below':
-            shouldTrigger = currentPrice <= alert.targetPrice;
-            break;
-          case 'change':
-            const changePercent = Math.abs((currentPrice - alert.currentPrice) / alert.currentPrice * 100);
-            shouldTrigger = changePercent >= (alert.changePercent || 5);
-            break;
-        }
-
-        if (shouldTrigger) {
-          // Trigger notification
-          notificationService.priceAlert(
-            alert.symbol,
-            currentPrice,
-            alert.targetPrice,
-            settings?.preferences?.defaultCurrency || 'USD'
-          );
-
-          return {
-            ...alert,
-            triggeredAt: new Date().toISOString(),
-            isActive: false
-          };
-        }
-
-        return { ...alert, currentPrice };
-      });
-
-      // Save updated alerts
-      localStorage.setItem('priceAlerts', JSON.stringify(updatedAlerts));
-      return updatedAlerts;
-    });
+  const saveAlerts = (updatedAlerts: PriceAlert[]) => {
+    localStorage.setItem(`price-alerts-${symbol}`, JSON.stringify(updatedAlerts));
+    setAlerts(updatedAlerts);
   };
 
   const createAlert = () => {
-    if (!newAlert.symbol || !newAlert.targetPrice) {
+    const targetPrice = parseFloat(newAlert.targetPrice);
+    
+    if (!targetPrice || targetPrice <= 0) {
       toast({
-        title: "Invalid Alert",
-        description: "Please fill all required fields",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    const stock = availableStocks.find(s => s.symbol === newAlert.symbol);
-    if (!stock) {
-      toast({
-        title: "Stock Not Found",
-        description: "Selected stock is not available",
+        title: "Invalid Price",
+        description: "Please enter a valid target price",
         variant: "destructive"
       });
       return;
     }
 
     const alert: PriceAlert = {
-      id: Math.random().toString(36).substr(2, 9),
-      symbol: newAlert.symbol,
-      companyName: stock.name,
-      alertType: newAlert.alertType,
-      targetPrice: parseFloat(newAlert.targetPrice),
-      currentPrice: stock.price,
-      changePercent: newAlert.changePercent ? parseFloat(newAlert.changePercent) : undefined,
+      id: Date.now().toString(),
+      symbol,
+      assetName,
+      targetPrice,
+      condition: newAlert.condition,
+      currentPrice,
       isActive: true,
-      createdAt: new Date().toISOString()
+      createdAt: new Date()
     };
 
     const updatedAlerts = [...alerts, alert];
     saveAlerts(updatedAlerts);
-
+    
+    setNewAlert({ targetPrice: '', condition: 'above' });
+    
     toast({
       title: "Alert Created",
-      description: `Price alert set for ${newAlert.symbol} at $${newAlert.targetPrice}`,
+      description: `Price alert set for ${symbol} ${newAlert.condition} $${targetPrice.toFixed(2)}`,
     });
-
-    // Reset form
-    setNewAlert({
-      symbol: '',
-      alertType: 'above',
-      targetPrice: '',
-      changePercent: ''
-    });
-    setIsDialogOpen(false);
   };
 
-  const deleteAlert = (alertId: string) => {
-    const updatedAlerts = alerts.filter(alert => alert.id !== alertId);
+  const deleteAlert = (id: string) => {
+    const updatedAlerts = alerts.filter(alert => alert.id !== id);
     saveAlerts(updatedAlerts);
     
     toast({
@@ -193,209 +97,183 @@ export const PriceAlerts: React.FC<PriceAlertsProps> = ({ availableStocks }) => 
     });
   };
 
-  const toggleAlert = (alertId: string) => {
+  const toggleAlert = (id: string) => {
     const updatedAlerts = alerts.map(alert => 
-      alert.id === alertId 
-        ? { ...alert, isActive: !alert.isActive, triggeredAt: undefined }
-        : alert
+      alert.id === id ? { ...alert, isActive: !alert.isActive } : alert
     );
     saveAlerts(updatedAlerts);
   };
 
-  const getAlertIcon = (alertType: string) => {
-    switch (alertType) {
-      case 'above': return <TrendingUp className="w-4 h-4 text-green-600" />;
-      case 'below': return <TrendingDown className="w-4 h-4 text-red-600" />;
-      case 'change': return <AlertTriangle className="w-4 h-4 text-yellow-600" />;
-      default: return <Bell className="w-4 h-4" />;
-    }
-  };
-
-  const formatAlertCondition = (alert: PriceAlert) => {
-    switch (alert.alertType) {
-      case 'above':
-        return `When price goes above $${alert.targetPrice}`;
-      case 'below':
-        return `When price goes below $${alert.targetPrice}`;
-      case 'change':
-        return `When price changes by ${alert.changePercent}%`;
-      default:
-        return 'Unknown condition';
-    }
+  const getAlertStatus = (alert: PriceAlert) => {
+    const isTriggered = alert.condition === 'above' 
+      ? currentPrice >= alert.targetPrice 
+      : currentPrice <= alert.targetPrice;
+    
+    return isTriggered;
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center">
+    <div className="space-y-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
             <Bell className="w-5 h-5 mr-2" />
-            Price Alerts
+            Price Alerts for {symbol}
+          </CardTitle>
+          <CardDescription>
+            Get notified when {assetName} reaches your target price
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {/* Current Price Display */}
+          <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg mb-6">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold">{assetName} ({symbol})</h3>
+              <div className="text-3xl font-bold mt-2">
+                ${currentPrice.toFixed(currentPrice < 1 ? 6 : 2)}
+              </div>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Current Price</p>
+            </div>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button size="sm">
-                <Plus className="w-4 h-4 mr-2" />
-                Add Alert
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create Price Alert</DialogTitle>
-                <DialogDescription>
-                  Get notified when your stock reaches your target price
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div>
-                  <Label htmlFor="symbol">Stock Symbol</Label>
-                  <Select value={newAlert.symbol} onValueChange={(value) => 
-                    setNewAlert(prev => ({ ...prev, symbol: value }))
-                  }>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select stock" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableStocks.map((stock) => (
-                        <SelectItem key={stock.symbol} value={stock.symbol}>
-                          {stock.symbol} - {stock.name} (${stock.price.toFixed(2)})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
 
-                <div>
-                  <Label htmlFor="alertType">Alert Type</Label>
-                  <Select value={newAlert.alertType} onValueChange={(value: 'above' | 'below' | 'change') => 
-                    setNewAlert(prev => ({ ...prev, alertType: value }))
-                  }>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="above">Price Above</SelectItem>
-                      <SelectItem value="below">Price Below</SelectItem>
-                      <SelectItem value="change">Price Change %</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+          {/* Create New Alert */}
+          <div className="border rounded-lg p-4 mb-6">
+            <h3 className="font-semibold mb-4 flex items-center">
+              <Plus className="w-4 h-4 mr-2" />
+              Create New Alert
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <Label htmlFor="condition">Condition</Label>
+                <Select value={newAlert.condition} onValueChange={(value: 'above' | 'below') => 
+                  setNewAlert(prev => ({ ...prev, condition: value }))
+                }>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="above">
+                      <div className="flex items-center">
+                        <TrendingUp className="w-4 h-4 mr-2 text-green-600" />
+                        Above
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="below">
+                      <div className="flex items-center">
+                        <TrendingDown className="w-4 h-4 mr-2 text-red-600" />
+                        Below
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-                {newAlert.alertType !== 'change' ? (
-                  <div>
-                    <Label htmlFor="targetPrice">Target Price ($)</Label>
-                    <Input
-                      type="number"
-                      step="0.01"
-                      value={newAlert.targetPrice}
-                      onChange={(e) => setNewAlert(prev => ({ ...prev, targetPrice: e.target.value }))}
-                      placeholder="Enter target price"
-                    />
-                  </div>
-                ) : (
-                  <div>
-                    <Label htmlFor="changePercent">Change Percentage (%)</Label>
-                    <Input
-                      type="number"
-                      step="0.1"
-                      value={newAlert.changePercent}
-                      onChange={(e) => setNewAlert(prev => ({ ...prev, changePercent: e.target.value }))}
-                      placeholder="e.g., 5 for 5% change"
-                    />
-                  </div>
-                )}
+              <div>
+                <Label htmlFor="targetPrice">Target Price ($)</Label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={newAlert.targetPrice}
+                  onChange={(e) => setNewAlert(prev => ({ ...prev, targetPrice: e.target.value }))}
+                  placeholder="Enter target price"
+                />
+              </div>
 
+              <div className="flex items-end">
                 <Button onClick={createAlert} className="w-full">
+                  <Plus className="w-4 h-4 mr-2" />
                   Create Alert
                 </Button>
               </div>
-            </DialogContent>
-          </Dialog>
-        </CardTitle>
-        <CardDescription>
-          Manage your price alerts and notifications
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {alerts.length === 0 ? (
-          <div className="text-center py-8">
-            <Bell className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No alerts set</h3>
-            <p className="text-gray-600 dark:text-gray-400 mb-4">
-              Create your first price alert to get notified when stocks hit your target prices
-            </p>
+            </div>
           </div>
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Stock</TableHead>
-                <TableHead>Condition</TableHead>
-                <TableHead>Current Price</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {alerts.map((alert) => (
-                <TableRow key={alert.id}>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{alert.symbol}</div>
-                      <div className="text-sm text-gray-600 dark:text-gray-400">
-                        {alert.companyName}
-                      </div>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center">
-                      {getAlertIcon(alert.alertType)}
-                      <span className="ml-2 text-sm">
-                        {formatAlertCondition(alert)}
-                      </span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    ${alert.currentPrice.toFixed(2)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={
-                      alert.triggeredAt ? 'destructive' : 
-                      alert.isActive ? 'default' : 'secondary'
-                    }>
-                      {alert.triggeredAt ? 'Triggered' : 
-                       alert.isActive ? 'Active' : 'Inactive'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center space-x-2">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => toggleAlert(alert.id)}
-                        disabled={!!alert.triggeredAt}
-                      >
-                        {alert.isActive ? (
-                          <BellOff className="w-4 h-4" />
-                        ) : (
-                          <Bell className="w-4 h-4" />
-                        )}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => deleteAlert(alert.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-    </Card>
+
+          {/* Active Alerts */}
+          {alerts.length > 0 ? (
+            <div>
+              <h3 className="font-semibold mb-4">Active Alerts ({alerts.filter(a => a.isActive).length})</h3>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Condition</TableHead>
+                      <TableHead>Target Price</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Created</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {alerts.map((alert) => {
+                      const isTriggered = getAlertStatus(alert);
+                      
+                      return (
+                        <TableRow key={alert.id} className={!alert.isActive ? 'opacity-50' : ''}>
+                          <TableCell>
+                            <div className="flex items-center">
+                              {alert.condition === 'above' ? (
+                                <TrendingUp className="w-4 h-4 mr-2 text-green-600" />
+                              ) : (
+                                <TrendingDown className="w-4 h-4 mr-2 text-red-600" />
+                              )}
+                              {alert.condition === 'above' ? 'Above' : 'Below'}
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-medium">
+                            ${alert.targetPrice.toFixed(2)}
+                          </TableCell>
+                          <TableCell>
+                            {isTriggered ? (
+                              <Badge variant="default" className="bg-green-100 text-green-800">
+                                Triggered
+                              </Badge>
+                            ) : alert.isActive ? (
+                              <Badge variant="outline">
+                                Active
+                              </Badge>
+                            ) : (
+                              <Badge variant="secondary">
+                                Paused
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm text-gray-600">
+                            {alert.createdAt.toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center space-x-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => toggleAlert(alert.id)}
+                              >
+                                {alert.isActive ? 'Pause' : 'Resume'}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => deleteAlert(alert.id)}
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <Bell className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p>No price alerts set for {symbol}</p>
+              <p className="text-sm">Create your first alert above to get started</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
   );
 };
