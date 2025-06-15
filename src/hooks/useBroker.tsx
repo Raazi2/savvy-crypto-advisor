@@ -24,7 +24,7 @@ export const BrokerProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     // Initialize Zerodha service if API key is available
-    const apiKey = process.env.REACT_APP_ZERODHA_API_KEY || 'demo_api_key';
+    const apiKey = import.meta.env.VITE_ZERODHA_API_KEY || 'demo_api_key';
     const service = new ZerodhaService(apiKey);
     setZerodhaService(service);
 
