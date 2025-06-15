@@ -32,6 +32,7 @@ import { InvestmentIdeas } from "@/components/InvestmentIdeas";
 import LoanCalculator from "@/components/LoanCalculator";
 import PaperTrading from "@/components/PaperTrading";
 import { MutualFundDashboard } from "@/components/MutualFundDashboard";
+import { TaxPlanningDashboard } from "@/components/TaxPlanningDashboard";
 
 const Index = () => {
   const [isDarkMode, setIsDarkMode] = useState(true);
