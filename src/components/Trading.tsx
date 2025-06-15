@@ -13,6 +13,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useSettings } from '@/hooks/useSettings';
+import { TechnicalAnalysis } from './TechnicalAnalysis';
+import { FundamentalAnalysis } from './FundamentalAnalysis';
+import { PriceAlerts } from './PriceAlerts';
+import { BrokerageCalculator } from './BrokerageCalculator';
 
 interface StockData {
   symbol: string;
