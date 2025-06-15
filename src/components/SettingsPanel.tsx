@@ -7,10 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Settings, Key, Bell, Palette, Globe, Save, Eye, EyeOff, Check, X, AlertTriangle } from "lucide-react";
+import { Settings, Key, Bell, Palette, Globe, Save, Eye, EyeOff, Check, X, AlertTriangle, TrendingUp } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useSettings } from "@/hooks/useSettings";
 
 interface ApiKeyStatus {
   valid: boolean;
@@ -18,41 +19,10 @@ interface ApiKeyStatus {
   error?: string;
 }
 
-interface SettingsData {
-  apiKeys: {
-    openrouter: string;
-    alphavantage: string;
-    etherscan: string;
-  };
-  notifications: {
-    priceAlerts: boolean;
-    securityAlerts: boolean;
-    marketNews: boolean;
-    portfolioUpdates: boolean;
-    tradeConfirmations: boolean;
-    educationalContent: boolean;
-    socialUpdates: boolean;
-  };
-  preferences: {
-    defaultCurrency: string;
-    theme: string;
-    refreshInterval: string;
-    language: string;
-    timezone: string;
-    dateFormat: string;
-    numberFormat: string;
-  };
-  privacy: {
-    sharePortfolio: boolean;
-    showOnlineStatus: boolean;
-    allowDataCollection: boolean;
-    marketingEmails: boolean;
-  };
-}
-
 export const SettingsPanel = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { settings, updateSettings, saveSettings: saveSettingsToContext } = useSettings();
   const [loading, setLoading] = useState(false);
   const [showApiKeys, setShowApiKeys] = useState({
     openrouter: false,
@@ -64,38 +34,6 @@ export const SettingsPanel = () => {
     openrouter: { valid: false, testing: false },
     alphavantage: { valid: false, testing: false },
     etherscan: { valid: false, testing: false }
-  });
-
-  const [settings, setSettings] = useState<SettingsData>({
-    apiKeys: {
-      openrouter: '',
-      alphavantage: '',
-      etherscan: ''
-    },
-    notifications: {
-      priceAlerts: true,
-      securityAlerts: true,
-      marketNews: false,
-      portfolioUpdates: true,
-      tradeConfirmations: true,
-      educationalContent: false,
-      socialUpdates: true
-    },
-    preferences: {
-      defaultCurrency: 'USD',
-      theme: 'dark',
-      refreshInterval: '60',
-      language: 'en',
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      dateFormat: 'MM/DD/YYYY',
-      numberFormat: 'en-US'
-    },
-    privacy: {
-      sharePortfolio: false,
-      showOnlineStatus: true,
-      allowDataCollection: true,
-      marketingEmails: false
-    }
   });
 
   // Load settings on component mount
@@ -111,7 +49,6 @@ export const SettingsPanel = () => {
       const storedSettings = localStorage.getItem(`settings_${user.id}`);
       if (storedSettings) {
         const parsed = JSON.parse(storedSettings);
-        setSettings(prev => ({ ...prev, ...parsed }));
         
         // Validate stored API keys
         if (parsed.apiKeys) {
@@ -121,11 +58,6 @@ export const SettingsPanel = () => {
             }
           });
         }
-      }
-
-      // Also check user metadata
-      if (user.user_metadata?.settings) {
-        setSettings(prev => ({ ...prev, ...user.user_metadata.settings }));
       }
     } catch (error) {
       console.error('Error loading settings:', error);
@@ -185,13 +117,12 @@ export const SettingsPanel = () => {
   };
 
   const handleApiKeyChange = (service: string, value: string) => {
-    setSettings(prev => ({
-      ...prev,
+    updateSettings({
       apiKeys: {
-        ...prev.apiKeys,
+        ...settings.apiKeys,
         [service]: value
       }
-    }));
+    });
 
     // Debounce validation
     if (value.length > 10) {
@@ -200,23 +131,21 @@ export const SettingsPanel = () => {
   };
 
   const handleNotificationChange = (key: string, value: boolean) => {
-    setSettings(prev => ({
-      ...prev,
+    updateSettings({
       notifications: {
-        ...prev.notifications,
+        ...settings.notifications,
         [key]: value
       }
-    }));
+    });
   };
 
   const handlePreferenceChange = (key: string, value: string) => {
-    setSettings(prev => ({
-      ...prev,
+    updateSettings({
       preferences: {
-        ...prev.preferences,
+        ...settings.preferences,
         [key]: value
       }
-    }));
+    });
 
     // Apply theme immediately
     if (key === 'theme') {
@@ -229,13 +158,12 @@ export const SettingsPanel = () => {
   };
 
   const handlePrivacyChange = (key: string, value: boolean) => {
-    setSettings(prev => ({
-      ...prev,
+    updateSettings({
       privacy: {
-        ...prev.privacy,
+        ...settings.privacy,
         [key]: value
       }
-    }));
+    });
   };
 
   const saveSettings = async () => {
@@ -243,26 +171,7 @@ export const SettingsPanel = () => {
 
     setLoading(true);
     try {
-      // Save to localStorage
-      localStorage.setItem(`settings_${user.id}`, JSON.stringify(settings));
-
-      // Update user metadata in Supabase
-      const { error } = await supabase.auth.updateUser({
-        data: {
-          settings: {
-            notifications: settings.notifications,
-            preferences: settings.preferences,
-            privacy: settings.privacy
-          }
-        }
-      });
-
-      if (error) throw error;
-
-      // Save API keys securely (in a real app, these would go to a secure backend)
-      if (Object.values(settings.apiKeys).some(key => key.trim())) {
-        localStorage.setItem(`api_keys_${user.id}`, JSON.stringify(settings.apiKeys));
-      }
+      await saveSettingsToContext();
 
       toast({
         title: "Settings Saved",
@@ -311,7 +220,12 @@ export const SettingsPanel = () => {
     reader.onload = (e) => {
       try {
         const imported = JSON.parse(e.target?.result as string);
-        setSettings(prev => ({ ...prev, ...imported }));
+        // Merge with existing settings
+        Object.keys(imported).forEach(key => {
+          if (key !== 'apiKeys') {
+            updateSettings({ [key]: imported[key] });
+          }
+        });
         toast({
           title: "Settings Imported",
           description: "Settings have been imported successfully.",
@@ -455,6 +369,74 @@ export const SettingsPanel = () => {
           </CardContent>
         </Card>
 
+        {/* Trading Preferences */}
+        <Card className="backdrop-blur-xl bg-white/10 border border-white/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="w-5 h-5" />
+              Trading Preferences
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Default Broker</Label>
+              <Select 
+                value={settings.preferences.defaultBroker} 
+                onValueChange={(value) => handlePreferenceChange('defaultBroker', value)}
+              >
+                <SelectTrigger className="bg-white/5 border-white/20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="zerodha">Zerodha - ₹20 per order</SelectItem>
+                  <SelectItem value="angelone">Angel One - ₹20 per order</SelectItem>
+                  <SelectItem value="upstox">Upstox - ₹20 per order</SelectItem>
+                  <SelectItem value="groww">Groww - ₹20 per order</SelectItem>
+                  <SelectItem value="icici">ICICI Direct - ₹25 per order</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs opacity-60 mt-1">
+                Your preferred broker for quick trade redirects
+              </p>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Risk Tolerance</Label>
+              <Select 
+                value={settings.preferences.riskTolerance || 'moderate'} 
+                onValueChange={(value) => handlePreferenceChange('riskTolerance', value)}
+              >
+                <SelectTrigger className="bg-white/5 border-white/20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="conservative">Conservative</SelectItem>
+                  <SelectItem value="moderate">Moderate</SelectItem>
+                  <SelectItem value="aggressive">Aggressive</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Investment Goals</Label>
+              <Select 
+                value={settings.preferences.investmentGoals || 'growth'} 
+                onValueChange={(value) => handlePreferenceChange('investmentGoals', value)}
+              >
+                <SelectTrigger className="bg-white/5 border-white/20">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="income">Income Generation</SelectItem>
+                  <SelectItem value="growth">Capital Growth</SelectItem>
+                  <SelectItem value="balanced">Balanced</SelectItem>
+                  <SelectItem value="speculation">Speculation</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Display Preferences */}
         <Card className="backdrop-blur-xl bg-white/10 border border-white/20">
           <CardHeader>
@@ -476,6 +458,7 @@ export const SettingsPanel = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="USD">USD - US Dollar</SelectItem>
+                    <SelectItem value="INR">INR - Indian Rupee</SelectItem>
                     <SelectItem value="EUR">EUR - Euro</SelectItem>
                     <SelectItem value="GBP">GBP - British Pound</SelectItem>
                     <SelectItem value="JPY">JPY - Japanese Yen</SelectItem>
